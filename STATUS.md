@@ -49,8 +49,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M0** | First-hour feasibility gate: confirm reuse inventory, establish repo, retrieve one real bounded wallet dataset, freeze the source. | Repo initialized with an initial commit recording pre-implementation state; `docs/REUSE.md` confirmed or corrected against the real files; one provider and chain chosen with the endpoint's *actual* history and pagination capability demonstrated; real response saved as a fixture with full retrieval metadata; source frozen in `STATUS.md`. | The exact request issued; the raw saved response; the metadata record; transaction hashes, timestamps and direction fields identified in the real payload; pagination behaviour observed, not assumed. | **Accepted** |
 | **M1** | Evidence foundation: address validation, adapter to normalized evidence, three deterministic metrics, dedup, UTC bucketing, coverage status. | Metrics match hand-checked expected values on a small fixture; duplicate `(chainId, txHash)` records do not inflate counts; UTC calendar-date boundaries correct at both edges; a provider error surfaces as an error and never as zero activity; coverage is one of `complete_for_query` / `partial` / `unknown` with truncation and pagination recorded. | Passing test run output; the hand-checked expected values and how they were derived; a test proving error is not zero. | **Accepted** |
 | **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Accepted** |
-| **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | Completed — awaiting review |
-| **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | Not started |
+| **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | **Accepted** |
+| **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | In progress |
 | **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | Blocked by gate |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | Not started |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
@@ -167,13 +167,39 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
   - `ledgerlens/` still unmodified; git history clean.
   - Full reproduction steps: `docs/verification/M2.md`.
 
+- **M3 — accepted.** Reviewer reproduced the core cross-app claim directly rather than trusting
+  the transcript:
+  - **Ran App Two live, alone.** Started only `apps/consumer` (port 3001); confirmed
+    `apps/passport` (port 3000) was genuinely unreachable throughout via direct `curl` port
+    probes before, during, and after.
+  - **Imported the real bundle via the running server's actual API**, not a mock:
+    `POST /api/validate` with `fixtures/real/live-exported-passport.json` returned
+    `isValid: true`, `"Bundle integrity matched"`, the correct PRD §8 caveat text.
+  - **Ran an independent tamper test against the live server**: mutated a claim value, left
+    `integrity.digest` stale, POSTed it — correctly returned `"Bundle integrity mismatch"`.
+  - **Ran an independent malformed-version test against the live server**: set
+    `schema_version: "99.0.0"`, POSTed it — correctly rejected with a clear message.
+  - **Independently recomputed the live-exported bundle's SHA-256 digest**, via their own
+    `computePayloadDigest`, outside any test file — matched the stored digest exactly.
+  - **Confirmed `apps/consumer`'s isolation structurally, not just by absence of an import**:
+    `@signal-passport/analysis` is not present in `apps/consumer/tsconfig.json`'s path map at
+    all, so it is unresolvable by the type system, not merely unused by convention. Grep for
+    `packages/analysis`/`@signal-passport/analysis`/`blockscout` under `apps/consumer` rerun
+    independently: 0 matches.
+  - **Reran `npm test` directly**: 47/47 pass.
+  - **Confirmed `METRIC_LABELS` is genuinely imported** from `@signal-passport/analysis` in
+    App One's `page.tsx`, not re-typed as a literal string.
+  - `ledgerlens/` still unmodified; git history clean; cleaned up the dev server started for
+    this review afterward.
+  - Full reproduction steps: `docs/verification/M3.md`.
+
 ## In Progress
 
-- **M3** — implementation complete; cross-app proof verified; awaiting technical lead review. Evidence recorded in `docs/verification/M3.md`.
+- **M4** — in progress: Task 0 completed and verified; implementing reliability and edge states.
 
 ## Not Started
 
-- M4 through M6. P0b and P1 remain gated.
+- M5 and M6. P0b and P1 remain gated.
 
 ## Known Issues
 
