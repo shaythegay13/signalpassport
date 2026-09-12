@@ -1,7 +1,7 @@
-# Signal Passport ? Methodology & Evidence Specification
+# Signal Passport — Methodology & Evidence Specification
 
 Version: 1.0 | Date: 2026-09-12
-Governing scope: `Signal-Passport-Weekend-PRD.md` (?7 Evidence and metrics, ?8 Data contract).
+Governing scope: `Signal-Passport-Weekend-PRD.md` (§7 Evidence and metrics, §8 Data contract).
 
 ---
 
@@ -25,7 +25,7 @@ If log-based events are incorporated:
 evidenceId = "${chainId}:${transactionHash.toLowerCase()}:${logIndex}"
 ```
 
-Per PRD ?7, log index is preserved in the evidence ID while unique transactions are still counted and deduplicated separately by `chainId + transactionHash`.
+Per PRD §7, log index is preserved in the evidence ID while unique transactions are still counted and deduplicated separately by `chainId + transactionHash`.
 
 ---
 
@@ -41,13 +41,13 @@ Address validation is implemented in `packages/analysis/src/address.ts`:
    - Any checksum mismatch is rejected with an actionable error message.
 
 > [!IMPORTANT]
-> **Wallet Ownership Disclaimer (PRD ?4 P0 item 2):** Validating an address format or checksum establishes only that the string is a syntactically and cryptographically valid public key hash. Address entry or validation **DOES NOT prove wallet control, custody, or authorization**.
+> **Wallet Ownership Disclaimer (PRD §4 P0 item 2):** Validating an address format or checksum establishes only that the string is a syntactically and cryptographically valid public key hash. Address entry or validation **DOES NOT prove wallet control, custody, or authorization**.
 
 ---
 
 ## 3. Qualifying Transaction Scope
 
-Per PRD ?7, the default qualifying scope is **successful outgoing transactions from the subject wallet within the declared UTC observation window**:
+Per PRD §7, the default qualifying scope is **successful outgoing transactions from the subject wallet within the declared UTC observation window**:
 
 1. **Direction**: `from.hash.toLowerCase() === subjectAddress.toLowerCase()`. Incoming transfers and third-party transactions are excluded.
 2. **Execution Status**: `status === "ok"` or `result === "success"`. Reverted or failed transactions are excluded from qualifying activity.
@@ -67,7 +67,7 @@ Before calculating any metrics, qualifying records are deduplicated by `${chainI
 
 The three P0 metrics are defined strictly deterministically from the deduplicated qualifying evidence set:
 
-| Metric | Type | Definition | Required Label Wording (PRD ?7) |
+| Metric | Type | Definition | Required Label Wording (PRD §7) |
 |---|---|---|---|
 | **Observed transaction count** | `observed_transaction_count` | Count of distinct qualifying transaction hashes. | *"Observed transactions"* |
 | **Active days** | `active_days` | Count of distinct UTC calendar dates (`YYYY-MM-DD` in UTC) containing at least one qualifying transaction. | *"Active days within this dataset"* |
@@ -76,7 +76,7 @@ The three P0 metrics are defined strictly deterministically from the deduplicate
 ### Grounding & Constraints:
 - Every metric produces a `Claim` object conforming to `packages/schema`.
 - Every claim's `evidenceIds` array strictly references real `EvidenceRecord` identifiers present in the dataset. No dangling or invented evidence IDs are permitted.
-- PRD ?7 prohibits inferring protocol expertise, trading behavior, or identity from these metrics. Specifically, unique recipients must be labeled "Unique recipient addresses", never "protocols used".
+- PRD §7 prohibits inferring protocol expertise, trading behavior, or identity from these metrics. Specifically, unique recipients must be labeled "Unique recipient addresses", never "protocols used".
 
 ---
 

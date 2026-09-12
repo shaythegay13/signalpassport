@@ -47,7 +47,7 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | M | Scope | Acceptance criteria | Required evidence | State |
 | --- | --- | --- | --- | --- |
 | **M0** | First-hour feasibility gate: confirm reuse inventory, establish repo, retrieve one real bounded wallet dataset, freeze the source. | Repo initialized with an initial commit recording pre-implementation state; `docs/REUSE.md` confirmed or corrected against the real files; one provider and chain chosen with the endpoint's *actual* history and pagination capability demonstrated; real response saved as a fixture with full retrieval metadata; source frozen in `STATUS.md`. | The exact request issued; the raw saved response; the metadata record; transaction hashes, timestamps and direction fields identified in the real payload; pagination behaviour observed, not assumed. | **Accepted** |
-| **M1** | Evidence foundation: address validation, adapter to normalized evidence, three deterministic metrics, dedup, UTC bucketing, coverage status. | Metrics match hand-checked expected values on a small fixture; duplicate `(chainId, txHash)` records do not inflate counts; UTC calendar-date boundaries correct at both edges; a provider error surfaces as an error and never as zero activity; coverage is one of `complete_for_query` / `partial` / `unknown` with truncation and pagination recorded. | Passing test run output; the hand-checked expected values and how they were derived; a test proving error is not zero. | Awaiting review |
+| **M1** | Evidence foundation: address validation, adapter to normalized evidence, three deterministic metrics, dedup, UTC bucketing, coverage status. | Metrics match hand-checked expected values on a small fixture; duplicate `(chainId, txHash)` records do not inflate counts; UTC calendar-date boundaries correct at both edges; a provider error surfaces as an error and never as zero activity; coverage is one of `complete_for_query` / `partial` / `unknown` with truncation and pagination recorded. | Passing test run output; the hand-checked expected values and how they were derived; a test proving error is not zero. | **Accepted** |
 | **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | Not started |
 | **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | Not started |
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | Not started |
@@ -95,22 +95,57 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     for M1+ to avoid corrupting real TypeScript source.
   - Full reproduction steps: `docs/verification/M0.md`.
 
+- **M1 — accepted.** Reviewer independently reran the test suite, read every source file in
+  `packages/schema` and `packages/analysis`, and re-derived the metric numbers before accepting:
+  - **Metrics verified against the reviewer's own private hand-check**, computed before seeing
+    Antigravity's report: observed transactions 28, active days 12, unique recipients 10 —
+    all three matched exactly, and the reviewer reran `npm test` directly (18/18 pass, real
+    output captured, not summarized).
+  - **EIP-55 checksum implementation read line-by-line** (`address.ts`): correct canonical
+    algorithm — keccak256 of the lowercase hex, per-nibble `>= 8` → uppercase — with a stated,
+    sensible policy for all-lower/all-upper vs. mixed-case input, and a wallet-control
+    disclaimer in the doc comment per PRD §4.
+  - **Qualifying-scope, dedup, and metrics logic read and traced**: direction check
+    (`from.hash === subject`), status check, UTC window check (inclusive bounds, matching the
+    reviewer's own M0 window math), dedup by `chainId:txHash` applied *before* metrics
+    (confirmed via `normalizeAndDeduplicateBlockscoutItems` → `computeDeterministicMetrics`
+    wiring in `real-fixture.test.ts`), UTC calendar-day bucketing via `getUTCFullYear`/
+    `getUTCMonth`/`getUTCDate` (not local time). No dangling evidence references — every claim's
+    `evidenceIds` checked against `evidenceMap` in the real-fixture test and confirmed by
+    reading the assertion, not just its pass/fail line.
+  - **Provider-error tests read and confirmed real**: network failure, HTTP 500, malformed
+    JSON, and — notably — a genuine mid-pagination failure test (page 1 succeeds, page 2
+    returns 504) proving `fetchBlockscoutHistory` propagates the error rather than returning a
+    silently-truncated result as if it were complete.
+  - **Repo-wide BOM/control-byte scan rerun independently**: clean across all tracked files.
+  - **New defect found, not blocking:** `docs/METHODOLOGY.md`, `docs/verification/M1.md`, and
+    this file's own M1 section (now rewritten) contained a *different* corruption mode than
+    M0's — a literal `?` byte (`0x3F`) written where a real Unicode character (`§`, `—`) should
+    be, confirmed at the byte level, not a terminal rendering issue. Consistent with UTF-8
+    content passing through a non-UTF-8 codepage at write time. Confined entirely to prose;
+    zero instances in any `.ts` source or test file (the `?` byte counts there are legitimate
+    TypeScript syntax — optional chaining, optional properties — confirmed by reading the
+    actual file content, not just counting bytes). Does not touch any M1 acceptance criterion,
+    so M1 is accepted with this noted rather than sent back for a third round. **Required as
+    the first step of the M2 prompt**, given M2 is exactly the milestone where byte-exact
+    serialization matters most.
+  - **Known design gap surfaced during review, not yet a defect:** `claimSchema.evidenceIds`
+    is `.min(1)` (non-empty) unconditionally. If a query genuinely returns zero qualifying
+    transactions, `computeDeterministicMetrics` would call `claimSchema.parse()` with an empty
+    `evidenceIds` array for the transaction-count and active-days claims, which would throw —
+    yet PRD §9 requires "zero qualifying activity returns a valid empty Passport." M1's own
+    acceptance criteria never required zero-activity handling (that's M4's job), so this is not
+    a blocker now, but it must be resolved before M4 and should be kept in mind during M2's
+    schema work so the fix doesn't have to unwind a hardened bundle schema later.
+  - Full reproduction steps: `docs/verification/M1.md`.
+
 ## In Progress
 
-- **M1** ? Evidence foundation deliverables ready for reviewer evaluation:
-  - **Schema package (`packages/schema`):** Defined runtime-validated schemas using zod for `EvidenceRecord` (PRD ?8 fields: `evidenceId`, `chainId`, `transactionHash`, `logIndex`, `timestamp`, `sender`, `recipient`, `status`, `provider`, `sourceReference`), `Claim`, `CoverageStatus` (`complete_for_query` | `partial` | `unknown`), and `CoverageRecord`.
-  - **Address validation (`packages/analysis/src/address.ts`):** Validates 0x + 40 hex shape and strict EIP-55 mixed-case checksums (accepting all-lower/all-upper as unchecksummed). Documented that address validation does not prove wallet control (PRD ?4 P0 item 2).
-  - **Blockscout client & adapter (`packages/analysis/src/blockscout.ts`):** Typed client wrapping `GET /api/v2/addresses/{address}/transactions?filter=from` with cursor pagination via `next_page_params` and loud error throwing on network/HTTP/JSON errors.
-  - **Normalization & Deduplication (`packages/analysis/src/normalize.ts`):** Normalizes raw items to `EvidenceRecord` using qualifying scope (outgoing, status="ok", inside declared UTC window). Deduplicates by `${chainId}:${txHash.toLowerCase()}`.
-  - **Three Deterministic Metrics (`packages/analysis/src/metrics.ts`):** Computes observed transaction count, active days (UTC calendar dates), and unique recipients. Enforces exact PRD ?7 wording. Guaranteed zero dangling evidence IDs.
-  - **Coverage Status & Metadata (`packages/analysis/src/coverage.ts`):** Computes `complete_for_query`, `partial`, and `unknown` with pagination and truncation metadata.
-  - **Hand-checked real fixture reconciliation (`tests/real-fixture.test.ts`):** Full pipeline matches independent hand-checks on `fixtures/real/page-1.json` + `page-2.json` (28 transactions, 12 active days, 10 unique recipients) and confirms all evidence IDs resolve within the result set.
-  - **Synthetic test suite:** `tests/duplicate.test.ts` (dedup prevents count inflation), `tests/boundary.test.ts` (midnight UTC boundary gives 2 active days), `tests/provider-error.test.ts` (error != zero activity), `tests/coverage.test.ts` (all 3 coverage states), `tests/address.test.ts` (checksummed, unchecksummed, malformed, corrupted checksum). All 18 tests passing.
-  - **Documentation:** Created `docs/METHODOLOGY.md` and `docs/verification/M1.md`.
+- **M2** — prompt not yet issued.
 
 ## Not Started
 
-- M2 through M6. P0b and P1 remain gated.
+- M3 through M6. P0b and P1 remain gated.
 
 ## Known Issues
 
