@@ -65,26 +65,14 @@ export function validateAiExplanation(
   allowedNumbers.add(String(windowDurationDays));
   allowedNumbers.add("30"); // standard fallback for 30-day window
 
-  // Add date components (year, month 1-12, zero-padded month, day 1-31, zero-padded day)
   const startYear = startDate.getUTCFullYear();
   const startMonth = startDate.getUTCMonth() + 1;
   const startDay = startDate.getUTCDate();
-  allowedNumbers.add(String(startYear));
-  allowedNumbers.add(String(startMonth));
-  allowedNumbers.add(String(startMonth).padStart(2, "0"));
-  allowedNumbers.add(String(startDay));
-  allowedNumbers.add(String(startDay).padStart(2, "0"));
-
   const endYear = endDate.getUTCFullYear();
   const endMonth = endDate.getUTCMonth() + 1;
   const endDay = endDate.getUTCDate();
-  allowedNumbers.add(String(endYear));
-  allowedNumbers.add(String(endMonth));
-  allowedNumbers.add(String(endMonth).padStart(2, "0"));
-  allowedNumbers.add(String(endDay));
-  allowedNumbers.add(String(endDay).padStart(2, "0"));
 
-  // Also strip known formatted window dates from a working copy of summary
+  // Strip declared observation window date substrings from a working copy of summary before number extraction
   let sanitizedSummary = summary;
   const monthNames = [
     "January", "February", "March", "April", "May", "June",

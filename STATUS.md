@@ -51,7 +51,7 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Accepted** |
 | **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | **Accepted** |
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | **Accepted** |
-| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Fixes requested** |
+| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Fixes requested (round 2)** |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | Not started |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
@@ -286,6 +286,44 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     verify it live, not just by reading the string); (3) fix the number-validator to not
     false-positive on the payload's own observation-window dates; (4) extend the
     coverage-upgrade check to also cover `unknown`, not only `partial`.
+  - Full report: `docs/verification/M5.md`.
+
+- **M5 round 2 — three of four fixes confirmed, one introduced a regression.** Reviewer
+  re-verified each fix independently before writing this:
+  - **`.env.local` cleanup confirmed**: both `signal-passport/.env.local` and
+    `apps/passport/.env.local` trimmed to exactly `AI_PROVIDER`/`GROQ_API_KEY`/
+    `ANTHROPIC_API_KEY`; root file's modify time is now fresh (today), no longer matching
+    LedgerLens's inherited timestamp.
+  - **Provider default fix confirmed live on the shipped app**: started App One, ran a real
+    analysis, then POSTed the real payload to the shipped `/api/explain` route with **no
+    provider override** (the actual code path used by the live UI) — got `isFallback: false`,
+    a genuine Groq response. This is exactly what was broken last round; now fixed.
+  - **Coverage-upgrade fix confirmed correct**: `coverageStatus !== "complete_for_query"`,
+    read directly, correctly covers both `partial` and `unknown`.
+  - **Date-validator fix is a regression, not accepted.** The fix does two things: (1) strips
+    actual date substrings from the text before number-extraction — precise and correct by
+    itself; (2) also adds every individual date component (start/end day, month, year) to the
+    global allowed-numbers set — redundant with (1) and opens a new hole, since those numbers
+    are now allowed anywhere in the text regardless of context. Reproduced directly: a summary
+    claiming "interacted with 13 separate smart contracts" and another claiming "9 ... appear
+    to be high-value transfers" — neither grounded in any real claim value — both passed
+    validation, because 13 and 9 happen to be the window's start-day and end-month. This is
+    exactly the class of hallucination the validator exists to catch.
+  - Fix requested: remove the date-component allowlist additions; keep only the string-based
+    date-substring redaction (already correct and sufficient by itself) plus the existing
+    narrow allowances (chain ID, claim values, evidence count, window duration). Add a
+    regression test using exactly the two fabricated-number-coinciding-with-a-date-component
+    cases above, proving both are rejected, alongside the existing real-date-mention test
+    proving that still passes.
+
+- **M5 round 2 fix implemented (ready for review).**
+  - **Date component allowlist removed**: `packages/analysis/src/ai/validation.ts` no longer adds individual date components (`startYear`, `startMonth`, `startDay`, `endYear`, `endMonth`, `endDay`) to `allowedNumbers`. Allowed numbers are strictly restricted to chain ID, claim metric values, evidence count, and window duration.
+  - **String-based date-substring redaction retained**: Only declared observation-window date substrings (both ISO `2026-08-13 to 2026-09-12` and calendar dates like `August 13, 2026`) are redacted from the summary before numeric token extraction.
+  - **Regression tests added** in `tests/m5-ai-explanation.test.ts`:
+    - Verified Example 1: `"interacted with 13 separate smart contracts"` (coinciding with start-day 13) is strictly rejected (`unverified numerical claim "13"`).
+    - Verified Example 2: `"Roughly 9 of these transactions appear to be high-value transfers"` (coinciding with end-month 9) is strictly rejected (`unverified numerical claim "9"`).
+    - Verified honest date mentions (`"From August 13, 2026 to September 12, 2026..."`) continue to validate cleanly.
+  - **Full test suite passes**: 63/63 tests passing. Production builds for both apps succeed.
   - Full report: `docs/verification/M5.md`.
 
 ## Not Started

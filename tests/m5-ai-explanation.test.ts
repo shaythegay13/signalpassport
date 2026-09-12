@@ -213,7 +213,7 @@ test("M5 Banned Causal and Identity Phrases: rejected by validator", () => {
 
 test("M5 Valid Grounded Output: accepted by validator", () => {
   const validOutput = {
-    summary: "Recorded 28 outgoing transactions across 19 active UTC days to 16 recipient addresses on Ethereum Mainnet during 2026.",
+    summary: "Recorded 28 outgoing transactions across 19 active UTC days to 16 recipient addresses on Ethereum Mainnet during the declared window (2026-08-13 to 2026-09-12).",
     evidenceIds: ["ev-tx-1", "ev-tx-2"]
   };
   const val = validateAiExplanation(validOutput, modelInput, testPayload, "gpt-oss-120b");
@@ -257,9 +257,29 @@ test("M5 Observation Window Dates: summary containing real window as ISO and for
 
   // Human-readable date format (August 13, 2026 to September 12, 2026)
   const readableOutput = {
-    summary: "From August 13, 2026 to September 12, 2026, the address completed 28 transactions across 19 active days.",
+    summary: "From August 13, 2026 to September 12, 2026, the address completed 28 transactions across 19 active days to 16 recipients.",
     evidenceIds: ["ev-tx-1"]
   };
   const readableVal = validateAiExplanation(readableOutput, modelInput, testPayload, "test-model");
   assert.equal(readableVal.valid, true, `Readable date summary should validate but failed: ${!readableVal.valid ? (readableVal as any).error : ""}`);
+});
+
+test("M5 Date Component Isolation Regression: fabricated numbers matching window date components are rejected", () => {
+  // Reviewer Example 1: 13 is the window start-day (August 13), but fabricated as contract count
+  const fabricatedContracts = {
+    summary: "The wallet also appears to have interacted with 13 separate smart contracts during this period.",
+    evidenceIds: ["ev-tx-1"]
+  };
+  const val1 = validateAiExplanation(fabricatedContracts, modelInput, testPayload, "test-model");
+  assert.equal(val1.valid, false, "Fabricated claim using date component 13 must be rejected");
+  assert.match(val1.error, /unverified numerical claim "13"/i);
+
+  // Reviewer Example 2: 9 is the window end-month (September), but fabricated as transfer count
+  const fabricatedTransfers = {
+    summary: "Roughly 9 of these transactions appear to be high-value transfers.",
+    evidenceIds: ["ev-tx-1"]
+  };
+  const val2 = validateAiExplanation(fabricatedTransfers, modelInput, testPayload, "test-model");
+  assert.equal(val2.valid, false, "Fabricated claim using date component 9 must be rejected");
+  assert.match(val2.error, /unverified numerical claim "9"/i);
 });
