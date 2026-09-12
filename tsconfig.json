@@ -6,6 +6,27 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "forceConsistentCasingInFileNames": true,
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@signal-passport/schema": [
+        "./packages/schema/src/index.ts"
+      ],
+      "@signal-passport/schema/*": [
+        "./packages/schema/src/*"
+      ],
+      "@signal-passport/analysis": [
+        "./packages/analysis/src/index.ts"
+      ],
+      "@signal-passport/analysis/*": [
+        "./packages/analysis/src/*"
+      ]
+    }
+  },
+  "include": [
+    "packages/**/*",
+    "tests/**/*"
+  ]
 }
