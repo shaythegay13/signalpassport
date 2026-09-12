@@ -16,7 +16,12 @@ const FROZEN_START_UTC = "2026-08-13T00:00:00.000Z";
 const FROZEN_END_UTC = "2026-09-12T16:08:11.000Z";
 
 export async function POST(request: NextRequest) {
-  let body: { address?: string };
+  let body: {
+    address?: string;
+    maxPages?: number;
+    simulateProviderError?: boolean;
+    simulateEmptyActivity?: boolean;
+  };
   try {
     body = await request.json();
   } catch {
@@ -26,7 +31,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { address } = body;
+  const { address, maxPages, simulateProviderError, simulateEmptyActivity } = body;
   if (!address || typeof address !== "string") {
     return Response.json(
       { error: "Missing required 'address' string in request body" },
@@ -85,6 +90,11 @@ export async function POST(request: NextRequest) {
   // Run pipeline asynchronously while streaming stages
   (async () => {
     try {
+      // Simulation of provider failure (Task 3)
+      if (simulateProviderError) {
+        throw new Error("Upstream data provider unavailable: Blockscout REST v2 connection refused (HTTP 503). Service temporarily unreachable.");
+      }
+
       // Stage 1: Fetching
       await sendEvent({
         stage: "fetching",
@@ -94,9 +104,19 @@ export async function POST(request: NextRequest) {
         window: { startUtc, endUtc }
       });
 
-      const historyResult = await fetchBlockscoutHistory(subjectAddress, {
-        maxPages: 10
-      });
+      let historyResult;
+      if (simulateEmptyActivity) {
+        historyResult = {
+          items: [],
+          pageCount: 1,
+          reachedEnd: true,
+          hitPageLimit: false
+        };
+      } else {
+        historyResult = await fetchBlockscoutHistory(subjectAddress, {
+          maxPages: maxPages && maxPages > 0 ? maxPages : 10
+        });
+      }
 
       // Stage 2: Normalizing
       await sendEvent({
@@ -163,16 +183,26 @@ export async function POST(request: NextRequest) {
       let statusCode = 500;
       if (errorMessage.includes("429") || errorMessage.toLowerCase().includes("rate limit")) {
         statusCode = 429;
-      } else if (errorMessage.includes("503") || errorMessage.toLowerCase().includes("fetch failed")) {
+      } else if (errorMessage.includes("503") || errorMessage.toLowerCase().includes("fetch failed") || errorMessage.toLowerCase().includes("unavailable")) {
         statusCode = 503;
       } else if (errorMessage.includes("502") || errorMessage.toLowerCase().includes("json")) {
         statusCode = 502;
       }
 
+      const isProviderError =
+        statusCode === 503 ||
+        statusCode === 502 ||
+        statusCode === 429 ||
+        errorMessage.toLowerCase().includes("provider") ||
+        errorMessage.toLowerCase().includes("blockscout") ||
+        errorMessage.toLowerCase().includes("fetch failed") ||
+        errorMessage.toLowerCase().includes("connection refused");
+
       await sendEvent({
         stage: "error",
         error: errorMessage,
-        statusCode
+        statusCode,
+        isProviderError
       });
     } finally {
       await writer.close();

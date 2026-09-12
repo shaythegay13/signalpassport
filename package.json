@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "tsx --test"
+    "test": "tsx --test",
+    "dev:passport": "npm run dev --prefix apps/passport",
+    "dev:consumer": "npm run dev --prefix apps/consumer",
+    "build:passport": "npm run build --prefix apps/passport",
+    "build:consumer": "npm run build --prefix apps/consumer"
   },
   "devDependencies": {
     "@types/node": "^24.13.4",

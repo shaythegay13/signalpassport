@@ -8,14 +8,18 @@ import { evaluateCoverage } from "../packages/analysis/src/coverage.js";
 import { createPassportBundle, verifyBundleIntegrity } from "../packages/verification/src/index.js";
 import { validateImportedBundle } from "../apps/consumer/app/lib/validate-bundle.js";
 
-const testScope: ObservationScope = {
-  chainId: 1,
-  contractAddresses: [],
-  fromTimestamp: "2026-08-13T00:00:00.000Z",
-  toTimestamp: "2026-09-12T16:08:11.000Z"
-};
-
 const testSubject = "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8";
+
+const testScope: ObservationScope = {
+  subjectAddress: testSubject,
+  chainId: 1,
+  window: {
+    startUtc: "2026-08-13T00:00:00.000Z",
+    endUtc: "2026-09-12T16:08:11.000Z"
+  },
+  direction: "outgoing",
+  status: "ok"
+};
 
 test("Task 0: computeDeterministicMetrics([], scope) does not throw and returns zero metrics with empty claims", () => {
   // Must not throw when evidence array is empty
@@ -35,10 +39,7 @@ test("Task 0: full pipeline with zero qualifying activity produces valid, schema
   const normResult = normalizeAndDeduplicateBlockscoutItems([], {
     subjectAddress: testSubject,
     chainId: testScope.chainId,
-    window: {
-      startUtc: testScope.fromTimestamp,
-      endUtc: testScope.toTimestamp
-    }
+    window: testScope.window
   });
 
   assert.equal(normResult.qualifyingEvidence.length, 0, "qualifying evidence must be 0");
@@ -66,10 +67,7 @@ test("Task 0: full pipeline with zero qualifying activity produces valid, schema
     sourceChainId: testScope.chainId,
     snapshotVersion: "1.0.0",
     generationTimestamp: "2026-09-12T17:00:00.000Z",
-    observationWindow: {
-      startUtc: testScope.fromTimestamp,
-      endUtc: testScope.toTimestamp
-    },
+    observationWindow: testScope.window,
     coverage,
     claims: metricsResult.claims,
     evidence: normResult.qualifyingEvidence,

@@ -21,6 +21,12 @@ export default function PassportApp() {
   const [bundle, setBundle] = useState<PassportBundle | null>(null);
   const [selectedMetricType, setSelectedMetricType] = useState<string>("observed_transaction_count");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isProviderError, setIsProviderError] = useState<boolean>(false);
+
+  // Simulation toggles for M4 edge states
+  const [simulateZeroActivity, setSimulateZeroActivity] = useState<boolean>(false);
+  const [simulatePartial, setSimulatePartial] = useState<boolean>(false);
+  const [simulateProviderError, setSimulateProviderError] = useState<boolean>(false);
 
   function handleAddressChange(val: string) {
     setAddressInput(val);
@@ -51,6 +57,7 @@ export default function PassportApp() {
     }
 
     setErrorMessage(null);
+    setIsProviderError(false);
     setBundle(null);
     setSteps([]);
     setCurrentStage("fetching");
@@ -59,7 +66,12 @@ export default function PassportApp() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: cleanAddress })
+        body: JSON.stringify({
+          address: cleanAddress,
+          maxPages: simulatePartial ? 1 : 10,
+          simulateEmptyActivity: simulateZeroActivity,
+          simulateProviderError: simulateProviderError
+        })
       });
 
       if (!response.ok) {
@@ -88,6 +100,9 @@ export default function PassportApp() {
           const event = JSON.parse(line);
 
           if (event.stage === "error") {
+            if (event.isProviderError) {
+              setIsProviderError(true);
+            }
             throw new Error(event.error || "Analysis pipeline failed");
           }
 
@@ -115,6 +130,14 @@ export default function PassportApp() {
       const msg = err instanceof Error ? err.message : String(err);
       setErrorMessage(msg);
       setCurrentStage("error");
+      if (
+        msg.toLowerCase().includes("provider") ||
+        msg.toLowerCase().includes("blockscout") ||
+        msg.toLowerCase().includes("503") ||
+        msg.toLowerCase().includes("connection refused")
+      ) {
+        setIsProviderError(true);
+      }
       setSteps((prev) => [
         ...prev,
         {
@@ -197,7 +220,11 @@ export default function PassportApp() {
             </button>
           </div>
 
-          {addressError && <div style={{ color: "var(--danger)", marginTop: "8px", fontSize: "0.85rem" }}>{addressError}</div>}
+          {addressError && (
+            <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", color: "var(--danger)", padding: "10px 14px", borderRadius: "6px", marginTop: "10px", fontSize: "0.85rem" }}>
+              <strong>Pre-flight Rejection (PRD §14):</strong> {addressError}. No network request was dispatched.
+            </div>
+          )}
 
           <div className="example-box">
             Example wallet:
@@ -205,6 +232,44 @@ export default function PassportApp() {
               {EXAMPLE_SUBJECT}
             </button>
             <span style={{ marginLeft: "6px" }}>(Frozen M0 test EOA with 28 qualifying txs)</span>
+          </div>
+
+          <div style={{ marginTop: "16px", padding: "12px 16px", background: "var(--surface-raised)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-dim)", marginBottom: "8px", fontWeight: 600 }}>
+              M4 Edge State Testing Controls (PRD §14)
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", fontSize: "0.85rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={simulateZeroActivity}
+                  onChange={(e) => {
+                    setSimulateZeroActivity(e.target.checked);
+                    if (e.target.checked) setSimulateProviderError(false);
+                  }}
+                />
+                <span>Simulate Zero Activity</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={simulatePartial}
+                  onChange={(e) => setSimulatePartial(e.target.checked)}
+                />
+                <span>Simulate Partial Coverage (Cap 1 page)</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={simulateProviderError}
+                  onChange={(e) => {
+                    setSimulateProviderError(e.target.checked);
+                    if (e.target.checked) setSimulateZeroActivity(false);
+                  }}
+                />
+                <span>Simulate Provider Outage (HTTP 503)</span>
+              </label>
+            </div>
           </div>
         </form>
 
@@ -227,7 +292,28 @@ export default function PassportApp() {
           </div>
         )}
 
-        {errorMessage && <div className="error-banner">Error: {errorMessage}</div>}
+        {/* Provider Unavailable Error Card (PRD §14) */}
+        {isProviderError && (
+          <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", borderRadius: "6px", padding: "16px", marginTop: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <strong style={{ color: "var(--danger)", fontSize: "1rem" }}>
+                Provider Unavailable (Upstream Infrastructure Failure)
+              </strong>
+              <span className="badge badge-danger">Operational Failure</span>
+            </div>
+            <p style={{ margin: "8px 0 0", color: "var(--text)", fontSize: "0.9rem" }}>
+              {errorMessage}
+            </p>
+            <div style={{ marginTop: "12px", padding: "10px 14px", background: "var(--surface)", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+              <strong>PRD §14 Invariant:</strong> Upstream provider unavailability, HTTP 5xx errors, and rate limits are operational infrastructure failures. They are <em>never</em> treated as zero activity and must never generate an empty passport.
+            </div>
+          </div>
+        )}
+
+        {/* General Error Banner */}
+        {errorMessage && !isProviderError && (
+          <div className="error-banner">Error: {errorMessage}</div>
+        )}
       </section>
 
       {/* Passport Output Screen */}
@@ -242,6 +328,20 @@ export default function PassportApp() {
               📥 Export Passport Bundle (.json)
             </button>
           </div>
+
+          {/* Partial Coverage Warning Banner (PRD §14) */}
+          {bundle.payload.coverage.coverageStatus === "partial" && (
+            <div className="warning-box" style={{ marginBottom: "16px" }}>
+              <strong>Warning: Partial Coverage (PRD §14).</strong> Upstream pagination limit reached before exhausting the 30-day window ({bundle.payload.coverage.pageCount} page(s) retrieved). Metrics reflect only observed transactions within available pages and are NOT complete for the entire query scope.
+            </div>
+          )}
+
+          {/* Zero Activity Informational Notice (PRD §14) */}
+          {bundle.payload.claims.length === 0 && (
+            <div style={{ background: "rgba(88, 166, 255, 0.1)", border: "1px solid rgba(88, 166, 255, 0.3)", color: "var(--border-active)", padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.88rem" }}>
+              <strong>Zero Qualifying Activity:</strong> No successful outgoing transactions were observed for this wallet in the declared 30-day UTC observation window. All 3 metrics deterministically evaluate to 0.
+            </div>
+          )}
 
           <div className="meta-grid">
             <div className="meta-item">
@@ -261,7 +361,9 @@ export default function PassportApp() {
             <div className="meta-item">
               <span className="meta-key">Coverage Status</span>
               <span className="meta-val">
-                <span className="badge badge-success">{bundle.payload.coverage.coverageStatus}</span>
+                <span className={`badge ${bundle.payload.coverage.coverageStatus === "partial" ? "badge-warning" : "badge-success"}`}>
+                  {bundle.payload.coverage.coverageStatus}
+                </span>
               </span>
             </div>
             <div className="meta-item">
@@ -278,23 +380,30 @@ export default function PassportApp() {
             </div>
           </div>
 
-          {/* Three Metric Cards (Using imported METRIC_LABELS) */}
+          {/* Three Metric Cards (Always 3 canonical metrics per PRD §7 & §14) */}
           <h3 style={{ marginBottom: "12px" }}>Deterministic Claims (Click to Drill Down)</h3>
           <div className="metrics-grid">
-            {bundle.payload.claims.map((claim) => {
-              const label = METRIC_LABELS[claim.metricType as keyof typeof METRIC_LABELS] || claim.metricType;
-              const isSelected = selectedMetricType === claim.metricType;
+            {[
+              { type: "observed_transaction_count", label: "Observed Transactions", units: "transactions" },
+              { type: "active_days", label: "Active Days (UTC)", units: "days" },
+              { type: "unique_recipients", label: "Unique Recipients", units: "addresses" }
+            ].map((m) => {
+              const claim = bundle.payload.claims.find((c) => c.metricType === m.type);
+              const val = claim ? claim.value : 0;
+              const units = claim ? claim.units : m.units;
+              const backingCount = claim ? claim.evidenceIds.length : 0;
+              const isSelected = selectedMetricType === m.type;
 
               return (
                 <div
-                  key={claim.claimId}
+                  key={m.type}
                   className={`metric-card ${isSelected ? "selected" : ""}`}
-                  onClick={() => setSelectedMetricType(claim.metricType)}
+                  onClick={() => setSelectedMetricType(m.type)}
                 >
-                  <div className="metric-label">{label}</div>
-                  <div className="metric-val">{claim.value}</div>
+                  <div className="metric-label">{m.label}</div>
+                  <div className="metric-val">{val}</div>
                   <div className="metric-units">
-                    {claim.units} ({claim.evidenceIds.length} backing records)
+                    {units} ({backingCount} backing records)
                   </div>
                 </div>
               );
@@ -302,65 +411,72 @@ export default function PassportApp() {
           </div>
 
           {/* Evidence Drill-down */}
-          {selectedClaim && (
-            <div className="evidence-drawer">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h4>
-                  Supporting Evidence: {METRIC_LABELS[selectedClaim.metricType as keyof typeof METRIC_LABELS]}
-                </h4>
-                <span className="badge">{selectedEvidenceRecords.length} Transactions</span>
-              </div>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "4px" }}>
-                Every metric is grounded in verifiable onchain transactions. Click transaction hash to inspect in Blockscout.
-              </p>
-
-              <table className="evidence-table">
-                <thead>
-                  <tr>
-                    <th>Tx Hash</th>
-                    <th>Timestamp (UTC)</th>
-                    <th>Recipient</th>
-                    <th>Status</th>
-                    <th>Explorer Link</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedEvidenceRecords.map((rec) => (
-                    <tr key={rec.evidenceId}>
-                      <td>
-                        <span style={{ fontFamily: "var(--font-mono)" }}>
-                          {rec.transactionHash.slice(0, 10)}...{rec.transactionHash.slice(-8)}
-                        </span>
-                      </td>
-                      <td>{rec.timestamp.replace("T", " ").replace(".000Z", "Z")}</td>
-                      <td>
-                        {rec.recipient ? (
-                          <span style={{ fontFamily: "var(--font-mono)" }}>
-                            {rec.recipient.slice(0, 8)}...{rec.recipient.slice(-6)}
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--text-dim)" }}>Contract Creation</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className="badge badge-success">{rec.status}</span>
-                      </td>
-                      <td>
-                        <a
-                          href={rec.sourceReference}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mono-link"
-                        >
-                          View on Blockscout ↗
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="evidence-drawer">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4>
+                Supporting Evidence: {METRIC_LABELS[selectedMetricType as keyof typeof METRIC_LABELS] || selectedMetricType}
+              </h4>
+              <span className="badge">{selectedEvidenceRecords.length} Transactions</span>
             </div>
-          )}
+
+            {selectedEvidenceRecords.length === 0 ? (
+              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "12px" }}>
+                0 backing transactions. No qualifying onchain activity met the observation scope criteria.
+              </p>
+            ) : (
+              <>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "4px" }}>
+                  Every metric is grounded in verifiable onchain transactions. Click transaction hash to inspect in Blockscout.
+                </p>
+
+                <table className="evidence-table">
+                  <thead>
+                    <tr>
+                      <th>Tx Hash</th>
+                      <th>Timestamp (UTC)</th>
+                      <th>Recipient</th>
+                      <th>Status</th>
+                      <th>Explorer Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedEvidenceRecords.map((rec) => (
+                      <tr key={rec.evidenceId}>
+                        <td>
+                          <span style={{ fontFamily: "var(--font-mono)" }}>
+                            {rec.transactionHash.slice(0, 10)}...{rec.transactionHash.slice(-8)}
+                          </span>
+                        </td>
+                        <td>{rec.timestamp.replace("T", " ").replace(".000Z", "Z")}</td>
+                        <td>
+                          {rec.recipient ? (
+                            <span style={{ fontFamily: "var(--font-mono)" }}>
+                              {rec.recipient.slice(0, 8)}...{rec.recipient.slice(-6)}
+                            </span>
+                          ) : (
+                            <span style={{ color: "var(--text-dim)" }}>Contract Creation</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className="badge badge-success">{rec.status}</span>
+                        </td>
+                        <td>
+                          <a
+                            href={rec.sourceReference}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mono-link"
+                          >
+                            View on Blockscout ↗
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
         </section>
       )}
     </div>

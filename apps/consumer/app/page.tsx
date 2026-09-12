@@ -163,6 +163,20 @@ export default function ConsumerApp() {
             <div style={{ marginTop: "24px" }}>
               <h3 style={{ marginBottom: "12px" }}>Passport Payload Overview (Read from Bundle)</h3>
 
+              {/* Partial Coverage Warning (PRD §14) */}
+              {result.bundle.payload.coverage.coverageStatus === "partial" && (
+                <div className="warning-box" style={{ marginBottom: "16px" }}>
+                  <strong>Warning: Partial Coverage (PRD §14).</strong> This passport bundle reflects incomplete transaction history within the declared observation window ({result.bundle.payload.coverage.pageCount} page(s) retrieved). Downstream systems should note that activity may be undercounted.
+                </div>
+              )}
+
+              {/* Zero Activity Notice (PRD §14) */}
+              {result.bundle.payload.claims.length === 0 && (
+                <div style={{ background: "rgba(88, 166, 255, 0.1)", border: "1px solid rgba(88, 166, 255, 0.3)", color: "var(--border-active)", padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.88rem" }}>
+                  <strong>Zero Qualifying Activity:</strong> Stored passport records 0 qualifying outgoing transactions in the observation window. All 3 metrics evaluate to 0.
+                </div>
+              )}
+
               <div className="meta-grid">
                 <div className="meta-item">
                   <span className="meta-key">Subject Address</span>
@@ -182,7 +196,9 @@ export default function ConsumerApp() {
                 <div className="meta-item">
                   <span className="meta-key">Coverage Status</span>
                   <span className="meta-val">
-                    <span className="badge badge-success">{result.bundle.payload.coverage.coverageStatus}</span>
+                    <span className={`badge ${result.bundle.payload.coverage.coverageStatus === "partial" ? "badge-warning" : "badge-success"}`}>
+                      {result.bundle.payload.coverage.coverageStatus}
+                    </span>
                   </span>
                 </div>
                 <div className="meta-item">
@@ -199,17 +215,28 @@ export default function ConsumerApp() {
                 </div>
               </div>
 
-              <h4 style={{ marginBottom: "12px" }}>Deterministic Claims ({result.bundle.payload.claims.length})</h4>
+              <h4 style={{ marginBottom: "12px" }}>Deterministic Claims (Always 3 canonical metrics per PRD §7 & §14)</h4>
               <div className="metrics-grid">
-                {result.bundle.payload.claims.map((claim) => (
-                  <div key={claim.claimId} className="metric-card">
-                    <div className="metric-label">{claim.metricType.replace(/_/g, " ").toUpperCase()}</div>
-                    <div className="metric-val">{claim.value}</div>
-                    <div className="metric-units">
-                      {claim.units} ({claim.evidenceIds.length} cited evidence records)
+                {[
+                  { key: "observed_transaction_count", label: "OBSERVED TRANSACTIONS", units: "transactions" },
+                  { key: "active_days", label: "ACTIVE DAYS (UTC)", units: "days" },
+                  { key: "unique_recipients", label: "UNIQUE RECIPIENTS", units: "addresses" }
+                ].map((m) => {
+                  const claim = result.bundle.payload.claims.find((c) => c.metricType === m.key);
+                  const val = claim ? claim.value : 0;
+                  const units = claim ? claim.units : m.units;
+                  const backingCount = claim ? claim.evidenceIds.length : 0;
+
+                  return (
+                    <div key={m.key} className="metric-card">
+                      <div className="metric-label">{m.label}</div>
+                      <div className="metric-val">{val}</div>
+                      <div className="metric-units">
+                        {units} ({backingCount} cited evidence records)
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div style={{ marginTop: "16px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
