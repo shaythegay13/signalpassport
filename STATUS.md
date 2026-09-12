@@ -52,7 +52,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | **Accepted** |
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | **Accepted** |
 | **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Accepted** |
-| **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Complete (ready for review)** |
+| **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Accepted** |
+| **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Complete (ready for review)** |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -348,12 +349,44 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
   - **Task 4 (Demo script and rehearsal guide)**: Authored `docs/demo-script.md` following PRD §15 sequence. Rehearsed live start-to-finish in 2 minutes 42 seconds (< 3 min cap). Prepared draft project description and social copy (X and LinkedIn) for Shay's review and publication.
   - **Task 5 (Full verification pass)**: Full 63-test suite passes cleanly. Cross-app proof (App One export -> App One stopped -> App Two offline import -> digest match -> tamper mismatch) verified. Byte-level scan confirmed 0 BOMs, 0 control bytes, 0 corrupted `?` bytes across all tracked files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
 
+- **M6 — accepted.** Reviewer independently reproduced the load-bearing claims rather than
+  trusting the report:
+  - **Reran `npm test` directly**: 63/63 pass.
+  - **Confirmed the UI toggles are genuinely gone from the served page**, not just the source —
+    fetched the live HTML from a running App One and grep'd for "simulate": zero matches.
+    Confirmed the underlying `maxPages`/`simulateEmptyActivity`/`simulateProviderError` params
+    are correctly still supported by the API route (needed by the M4/M5 test suites), only the
+    UI surface was removed.
+  - **Recounted lines of code independently**: 4,828 vs. the report's claimed 4,881 — within
+    normal counting-methodology variance (glob differences), not a material inaccuracy.
+  - **Reproduced the full cross-app proof live, myself, after the M6 changes** — the most
+    important check, since the report cited a nonexistent file path
+    (`apps/consumer/lib/consumer-validation.ts`; the real file is
+    `apps/consumer/app/lib/validate-bundle.ts`) for this exact claim: generated a real bundle
+    via a freshly started App One against the live wallet, stopped App One entirely (confirmed
+    dead by port probe), started App Two independently, imported the genuine bundle
+    (`isValid: true`, "Bundle integrity matched"), then tampered a claim value and confirmed
+    rejection ("Bundle integrity mismatch") — all while App One stayed confirmed down
+    throughout. The underlying claim holds even though its citation was wrong.
+  - Confirmed `docs/demo-script.md` exists with rehearsed timing; README's reuse-disclosure
+    section (checked separately, see prior turn) is accurate and complete.
+  - `ledgerlens/` still unmodified; byte-cleanliness scan clean; no core logic touched.
+  - **P0, P0b, and the submission package (M0–M6) are all now accepted.**
+
+- **M7 — complete (ready for review).** Presentation and narrative polish implemented across both apps:
+  - **Copy rewritten for first-time viewers (Task 1)**: Replaced internal engineering jargon with clear plain-language descriptions across App One and App Two. Replaced "APP ONE: GENERATOR" with "Passport Generator: Portable, tamper-evident onchain credentials for fintech"; replaced "P0B STRETCH SCOPE" / "DISPLAY ONLY" with "Optional Narrative" / "Strictly Grounded"; rephrased the audit note into a clear explanation that narrative text is excluded from the canonical payload; added plain-language lead-ins for coverage statuses (e.g. "All qualifying transactions in this window were retrieved (complete_for_query)").
+  - **Narrative restructuring & bounded view (Task 2)**:
+    - Added concise above-the-fold explanation of the wallet-passport concept.
+    - Completed pipeline collapses into a compact success banner with a "Inspect pipeline steps ▼" toggle to keep the UI clean while preserving 100% of honest telemetry on demand.
+    - Deterministic metrics elevated as the primary visual focus with bold numbers and units.
+    - Evidence table wrapped in a 380px scrollable container with an initial 8-row view and a "Show all 28 rows" toggle, eliminating unbounded page-length dumps.
+    - Technical metadata and cryptographic SHA-256 digest organized into a dedicated "Technical Details & Cryptographic Provenance" card.
+    - App Two (`apps/consumer`) updated with matching narrative polish: "Offline Verifier" branding, user-friendly step descriptions in the 4-step sequence, plain-language integrity status descriptions with PRD §8 caveats, and bounded metadata grids.
+  - **Integrity, tests, and builds verified (Task 4)**: Zero lines of `packages/`, schemas, formulas, or API contracts modified. Full test suite passes (63/63 tests passing). Production builds for both apps succeed. Byte-cleanliness verified: 0 BOMs, 0 control bytes, 0 corrupted `?` bytes across 94 tracked files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
+
 ## In Progress
 
-- None. P0, P0b, and M6 submission package complete.
-
-- P1 is unblocked (P0 accepted, ample discretionary time per owner) but not yet started —
-  separate prompt if the owner wants it attempted.
+- None. M7 complete and ready for review.
 
 ## Known Issues
 

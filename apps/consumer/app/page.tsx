@@ -61,22 +61,27 @@ export default function ConsumerApp() {
 
   return (
     <div className="shell">
+      {/* App Header */}
       <header className="app-header">
         <div className="logo-group">
-          <h1>Signal Passport</h1>
-          <span className="badge">App Two: Consumer</span>
+          <div>
+            <h1 style={{ margin: 0, fontSize: "1.6rem" }}>Signal Passport</h1>
+            <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+              Independent offline passport verifier
+            </p>
+          </div>
         </div>
-        <div>
-          <span className="badge badge-neutral">Independent Client (Zero Network / Zero Analysis)</span>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <span className="badge">Offline Verifier</span>
+          <span className="badge badge-neutral">Zero Network · Zero Analysis</span>
         </div>
       </header>
 
       {/* Import Card */}
       <section className="card">
-        <h2>Import Passport Bundle</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          Inspects and verifies a standalone Signal Passport JSON bundle offline without contacting any blockchain RPC,
-          upstream explorer, AI provider, or App One.
+        <h2 style={{ marginTop: 0, marginBottom: "6px" }}>Verify a Passport Bundle</h2>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.92rem", margin: "0 0 16px 0", lineHeight: 1.5 }}>
+          Import and verify any Signal Passport JSON bundle completely offline. This independent consumer application performs all checks locally—without contacting any blockchain RPCs, block explorers, AI providers, or App One.
         </p>
 
         <div
@@ -99,19 +104,21 @@ export default function ConsumerApp() {
           <div className="dropzone-text">
             {fileName ? `Loaded: ${fileName}` : "Click to select or drag and drop a Passport JSON file"}
           </div>
-          <div className="dropzone-subtext">Supports valid JSON bundles conforming to schema version 1.0.0</div>
+          <div className="dropzone-subtext">
+            Supports valid JSON bundles conforming to schema version 1.0.0 (try <code>fixtures/real/passport-bundle.json</code> for instant no-network demo)
+          </div>
         </div>
 
-        {isLoading && <div style={{ marginTop: "12px", color: "var(--text-muted)" }}>Validating bundle...</div>}
+        {isLoading && <div style={{ marginTop: "12px", color: "var(--text-muted)" }}>Running offline verification checks...</div>}
         {rawError && <div className="error-banner">{rawError}</div>}
       </section>
 
       {/* Sequential Verification Results */}
       {result && (
         <section className="card">
-          <h2>Verification Sequence</h2>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            The imported bundle undergoes four deterministic validation checks in strict order.
+          <h2 style={{ marginTop: 0, marginBottom: "4px", fontSize: "1.3rem" }}>Offline Verification Sequence</h2>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", margin: "0 0 16px 0" }}>
+            The imported bundle undergoes four independent deterministic checks executed locally by this consumer application:
           </p>
 
           <div className="step-checklist">
@@ -128,7 +135,7 @@ export default function ConsumerApp() {
           </div>
 
           {/* Dual Status Cards: Integrity vs Publication (Separated UI per PRD §8) */}
-          <div className="status-duo">
+          <div className="status-duo" style={{ marginTop: "20px" }}>
             {/* 1. Integrity Status */}
             <div
               className={`status-card ${
@@ -161,12 +168,17 @@ export default function ConsumerApp() {
           {/* Display Bundle Data (Read-only from bundle, never recomputed) */}
           {result.bundle && (
             <div style={{ marginTop: "24px" }}>
-              <h3 style={{ marginBottom: "12px" }}>Passport Payload Overview (Read from Bundle)</h3>
+              <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px", marginBottom: "16px" }}>
+                <h3 style={{ margin: "0 0 4px 0", fontSize: "1.15rem" }}>Verified Passport Claims</h3>
+                <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                  Objective facts read directly from the imported bundle's self-contained payload:
+                </p>
+              </div>
 
               {/* Partial Coverage Warning (PRD §14) */}
               {result.bundle.payload.coverage.coverageStatus === "partial" && (
                 <div className="warning-box" style={{ marginBottom: "16px" }}>
-                  <strong>Warning: Partial Coverage (PRD §14).</strong> This passport bundle reflects incomplete transaction history within the declared observation window ({result.bundle.payload.coverage.pageCount} page(s) retrieved). Downstream systems should note that activity may be undercounted.
+                  <strong>Partial Coverage Warning:</strong> This passport reflects incomplete transaction history within the declared observation window ({result.bundle.payload.coverage.pageCount} page(s) retrieved). Activity may be undercounted (coverage status: <code>partial</code>).
                 </div>
               )}
 
@@ -177,54 +189,15 @@ export default function ConsumerApp() {
                 </div>
               )}
 
-              <div className="meta-grid">
-                <div className="meta-item">
-                  <span className="meta-key">Subject Address</span>
-                  <span className="meta-val">{result.bundle.payload.subjectAddress}</span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-key">Source Chain ID</span>
-                  <span className="meta-val">{result.bundle.payload.sourceChainId}</span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-key">Observation Window (UTC)</span>
-                  <span className="meta-val">
-                    {result.bundle.payload.observationWindow.startUtc.slice(0, 10)} to{" "}
-                    {result.bundle.payload.observationWindow.endUtc.slice(0, 10)}
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-key">Coverage Status</span>
-                  <span className="meta-val">
-                    <span className={`badge ${result.bundle.payload.coverage.coverageStatus === "partial" ? "badge-warning" : "badge-success"}`}>
-                      {result.bundle.payload.coverage.coverageStatus}
-                    </span>
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-key">Snapshot Version / Generation Timestamp</span>
-                  <span className="meta-val">
-                    v{result.bundle.payload.snapshotVersion} — {result.bundle.payload.generationTimestamp}
-                  </span>
-                </div>
-                <div className="meta-item">
-                  <span className="meta-key">Stored Envelope Digest</span>
-                  <span className="meta-val" style={{ fontSize: "0.78rem" }}>
-                    {result.bundle.integrity.digest}
-                  </span>
-                </div>
-              </div>
-
-              <h4 style={{ marginBottom: "12px" }}>Deterministic Claims (Always 3 canonical metrics per PRD §7 & §14)</h4>
+              {/* Three Metric Cards */}
               <div className="metrics-grid">
                 {[
-                  { key: "observed_transaction_count", label: "OBSERVED TRANSACTIONS", units: "transactions" },
-                  { key: "active_days", label: "ACTIVE DAYS (UTC)", units: "days" },
-                  { key: "unique_recipients", label: "UNIQUE RECIPIENTS", units: "addresses" }
+                  { key: "observed_transaction_count", label: "Observed Transactions", units: "outgoing transactions" },
+                  { key: "active_days", label: "Active Days (UTC)", units: "distinct calendar days" },
+                  { key: "unique_recipients", label: "Unique Recipients", units: "destination addresses" }
                 ].map((m) => {
-                  const claim = result.bundle.payload.claims.find((c) => c.metricType === m.key);
+                  const claim = result.bundle?.payload.claims.find((c) => c.metricType === m.key);
                   const val = claim ? claim.value : 0;
-                  const units = claim ? claim.units : m.units;
                   const backingCount = claim ? claim.evidenceIds.length : 0;
 
                   return (
@@ -232,15 +205,67 @@ export default function ConsumerApp() {
                       <div className="metric-label">{m.label}</div>
                       <div className="metric-val">{val}</div>
                       <div className="metric-units">
-                        {units} ({backingCount} cited evidence records)
+                        {backingCount} supporting record(s) · {m.units}
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              <div style={{ marginTop: "16px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                Contains {result.bundle.payload.evidence.length} self-contained evidence records. No external API was consulted.
+              <div style={{ marginTop: "14px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                Verified against {result.bundle.payload.evidence.length} self-contained onchain evidence records stored in the bundle. No external API was consulted.
+              </div>
+
+              {/* Technical Metadata Grid */}
+              <div style={{ marginTop: "20px", padding: "16px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "6px" }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: "0.88rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Passport Envelope Metadata
+                </h4>
+
+                <div className="meta-grid" style={{ marginBottom: 0 }}>
+                  <div className="meta-item">
+                    <span className="meta-key">Subject Address</span>
+                    <span className="meta-val">{result.bundle.payload.subjectAddress}</span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Source Network</span>
+                    <span className="meta-val">Chain ID {result.bundle.payload.sourceChainId} (Ethereum Mainnet)</span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Observation Window (UTC)</span>
+                    <span className="meta-val">
+                      {result.bundle.payload.observationWindow.startUtc.slice(0, 10)} to{" "}
+                      {result.bundle.payload.observationWindow.endUtc.slice(0, 10)} (30 days)
+                    </span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Coverage Assessment</span>
+                    <span className="meta-val" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className={`badge ${result.bundle.payload.coverage.coverageStatus === "partial" ? "badge-warning" : "badge-success"}`}>
+                        {result.bundle.payload.coverage.coverageStatus === "complete_for_query"
+                          ? "Complete for Window"
+                          : result.bundle.payload.coverage.coverageStatus === "partial"
+                          ? "Partial Coverage"
+                          : "Unknown Coverage"}
+                      </span>
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
+                        ({result.bundle.payload.coverage.coverageStatus})
+                      </span>
+                    </span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Snapshot Version & Timestamp</span>
+                    <span className="meta-val">
+                      v{result.bundle.payload.snapshotVersion} · Sealed at {result.bundle.payload.generationTimestamp.replace("T", " ").replace(".000Z", " UTC")}
+                    </span>
+                  </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Stored Envelope Digest</span>
+                    <span className="meta-val" style={{ fontSize: "0.78rem" }}>
+                      {result.bundle.integrity.digest}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Imported AI Explanation (PRD §10 - Display Only) */}
@@ -248,7 +273,7 @@ export default function ConsumerApp() {
                 <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface-raised)", borderRadius: "8px", border: "1px solid var(--border)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <h4 style={{ margin: 0, fontSize: "1rem" }}>Imported Qualitative Explanation</h4>
+                      <h4 style={{ margin: 0, fontSize: "1.02rem" }}>Imported Narrative Explanation</h4>
                       <span className="badge badge-neutral">Display Only</span>
                     </div>
                     <div style={{ display: "flex", gap: "6px" }}>
@@ -260,7 +285,7 @@ export default function ConsumerApp() {
                   </div>
 
                   <div style={{ background: "rgba(210, 153, 34, 0.1)", border: "1px solid rgba(210, 153, 34, 0.3)", borderRadius: "6px", padding: "10px 14px", margin: "10px 0 14px 0", fontSize: "0.82rem", color: "var(--warning)" }}>
-                    <strong>Non-Payload Display Metadata:</strong> This qualitative explanation was attached to the envelope by the generator. It is NOT part of the canonical payload and is NOT verified by the cryptographic SHA-256 integrity check.
+                    <strong>Display Metadata:</strong> This qualitative explanation was attached to the envelope for human readers. It is NOT part of the canonical payload and is NOT verified by the cryptographic SHA-256 integrity check.
                   </div>
 
                   <p style={{ fontSize: "0.95rem", lineHeight: 1.6, margin: "12px 0", color: "var(--text)" }}>
@@ -272,10 +297,10 @@ export default function ConsumerApp() {
                     {result.bundle.explanation.evidenceIds.length === 0 ? (
                       <span>0 citations</span>
                     ) : (
-                      <span>
-                        {result.bundle.explanation.evidenceIds.map((id, idx) => (
-                          <span key={id} style={{ fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginRight: "6px" }}>
-                            {id.slice(0, 16)}...{idx < (result.bundle?.explanation?.evidenceIds.length ?? 0) - 1 ? "," : ""}
+                      <span style={{ display: "inline-flex", flexWrap: "wrap", gap: "6px", marginLeft: "6px" }}>
+                        {result.bundle.explanation.evidenceIds.map((id) => (
+                          <span key={id} className="badge" style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem" }}>
+                            Tx {id.replace(/^1:/, "").slice(0, 10)}...
                           </span>
                         ))}
                       </span>
@@ -284,7 +309,7 @@ export default function ConsumerApp() {
                 </div>
               ) : (
                 <div style={{ marginTop: "20px", padding: "12px 16px", background: "var(--surface)", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "0.82rem", color: "var(--text-dim)" }}>
-                  No optional AI explanation attached to this bundle. (Envelopes without explanations are valid and fully verifiable).
+                  No optional AI narrative attached to this bundle. (Passport bundles without explanations are fully valid and cryptographically verifiable).
                 </div>
               )}
             </div>
