@@ -1,0 +1,34 @@
+{
+  "description": "SYNTHETIC TEST DATA: Two identical transaction records with matching hash to test deduplication",
+  "is_synthetic": true,
+  "items": [
+    {
+      "hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "timestamp": "2026-08-20T12:00:00.000000Z",
+      "status": "ok",
+      "result": "success",
+      "block_number": 25800000,
+      "from": {
+        "hash": "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8"
+      },
+      "to": {
+        "hash": "0x66a3c2Fa3E467Aa586e90912f977e648589CaBaf"
+      },
+      "value": "1000000000000000000"
+    },
+    {
+      "hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "timestamp": "2026-08-20T12:00:00.000000Z",
+      "status": "ok",
+      "result": "success",
+      "block_number": 25800000,
+      "from": {
+        "hash": "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8"
+      },
+      "to": {
+        "hash": "0x66a3c2Fa3E467Aa586e90912f977e648589CaBaf"
+      },
+      "value": "1000000000000000000"
+    }
+  ]
+}

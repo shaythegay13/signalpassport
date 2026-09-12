@@ -1,0 +1,32 @@
+{
+  "description": "SYNTHETIC TEST DATA: Two transactions spanning midnight UTC (23:59:59Z and 00:00:01Z) to verify UTC date bucketing",
+  "is_synthetic": true,
+  "items": [
+    {
+      "hash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+      "timestamp": "2026-08-20T23:59:59.000000Z",
+      "status": "ok",
+      "result": "success",
+      "block_number": 25800100,
+      "from": {
+        "hash": "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8"
+      },
+      "to": {
+        "hash": "0x66a3c2Fa3E467Aa586e90912f977e648589CaBaf"
+      }
+    },
+    {
+      "hash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+      "timestamp": "2026-08-21T00:00:01.000000Z",
+      "status": "ok",
+      "result": "success",
+      "block_number": 25800101,
+      "from": {
+        "hash": "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8"
+      },
+      "to": {
+        "hash": "0x66a3c2Fa3E467Aa586e90912f977e648589CaBaf"
+      }
+    }
+  ]
+}
