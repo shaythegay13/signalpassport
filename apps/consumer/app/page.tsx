@@ -80,8 +80,8 @@ export default function ConsumerApp() {
       {/* Import Card */}
       <section className="card">
         <h2 style={{ marginTop: 0, marginBottom: "6px" }}>Verify a Passport Bundle</h2>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.92rem", margin: "0 0 16px 0", lineHeight: 1.5 }}>
-          Import and verify any Signal Passport JSON bundle completely offline. This independent consumer application performs all checks locally—without contacting any blockchain RPCs, block explorers, AI providers, or App One.
+        <p style={{ color: "var(--text)", fontSize: "0.92rem", margin: "0 0 16px 0", lineHeight: 1.6 }}>
+          Every fintech app that wants to understand a wallet's activity currently has to build its own pipeline to fetch and interpret blockchain history — over and over, for every app. Signal Passport does that work once: enter a wallet, get a portable record of its verified activity, and any other application can check that record for itself, without re-scanning the blockchain or taking your word for it.
         </p>
 
         <div
@@ -189,31 +189,90 @@ export default function ConsumerApp() {
                 </div>
               )}
 
-              {/* Three Metric Cards */}
-              <div className="metrics-grid">
-                {[
-                  { key: "observed_transaction_count", label: "Observed Transactions", units: "outgoing transactions" },
-                  { key: "active_days", label: "Active Days (UTC)", units: "distinct calendar days" },
-                  { key: "unique_recipients", label: "Unique Recipients", units: "destination addresses" }
-                ].map((m) => {
-                  const claim = result.bundle?.payload.claims.find((c) => c.metricType === m.key);
-                  const val = claim ? claim.value : 0;
-                  const backingCount = claim ? claim.evidenceIds.length : 0;
-
-                  return (
-                    <div key={m.key} className="metric-card">
-                      <div className="metric-label">{m.label}</div>
-                      <div className="metric-val">{val}</div>
-                      <div className="metric-units">
-                        {backingCount} supporting record(s) · {m.units}
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Factual Record Notice (PRD §7/§9 - Intentional Design Choice) */}
+              <div style={{ margin: "0 0 18px 0", padding: "14px 18px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "8px", display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>⚖️</span>
+                <div style={{ fontSize: "0.88rem", lineHeight: 1.5, color: "var(--text)" }}>
+                  <strong style={{ display: "block", marginBottom: "3px", color: "var(--text)" }}>
+                    A factual record, not a verdict
+                  </strong>
+                  This is not a credit score, a trust rating, or a risk assessment. It does not identify who owns this wallet or say whether it can be trusted — it shows only what actually happened, with the evidence to check it yourself.
+                </div>
               </div>
+
+              {/* Three Metric Cards */}
+              {(() => {
+                const txClaim = result.bundle?.payload.claims.find((c) => c.metricType === "observed_transaction_count");
+                const activeDaysClaim = result.bundle?.payload.claims.find((c) => c.metricType === "active_days");
+                const recipientsClaim = result.bundle?.payload.claims.find((c) => c.metricType === "unique_recipients");
+
+                const txCount = txClaim ? txClaim.value : 0;
+                const activeDays = activeDaysClaim ? activeDaysClaim.value : 0;
+                const uniqueRecipients = recipientsClaim ? recipientsClaim.value : 0;
+
+                const startMs = new Date(result.bundle.payload.observationWindow.startUtc).getTime();
+                const endMs = new Date(result.bundle.payload.observationWindow.endUtc).getTime();
+                const windowDays = Math.max(1, Math.round((endMs - startMs) / (1000 * 60 * 60 * 24)));
+
+                return (
+                  <div className="metrics-grid">
+                    {[
+                      {
+                        key: "observed_transaction_count",
+                        label: "Observed Transactions",
+                        units: "outgoing transactions",
+                        contextLine: txCount > 0
+                          ? `An average of one transaction every ${(windowDays / txCount).toFixed(1)} days`
+                          : null
+                      },
+                      {
+                        key: "active_days",
+                        label: "Active Days (UTC)",
+                        units: "distinct calendar days",
+                        contextLine: `${activeDays} of ${windowDays} days in this window (${Math.round((activeDays / windowDays) * 100)}%)`
+                      },
+                      {
+                        key: "unique_recipients",
+                        label: "Unique Recipients",
+                        units: "destination addresses",
+                        contextLine: uniqueRecipients > 0
+                          ? `An average of ${(txCount / uniqueRecipients).toFixed(1)} transactions per recipient`
+                          : null
+                      }
+                    ].map((m) => {
+                      const claim = result.bundle?.payload.claims.find((c) => c.metricType === m.key);
+                      const val = claim ? claim.value : 0;
+                      const backingCount = claim ? claim.evidenceIds.length : 0;
+
+                      return (
+                        <div key={m.key} className="metric-card">
+                          <div className="metric-label">{m.label}</div>
+                          <div className="metric-val">{val}</div>
+                          <div className="metric-units">
+                            {backingCount} supporting record(s) · {m.units}
+                          </div>
+                          {m.contextLine && (
+                            <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--border)", fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                              {m.contextLine}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               <div style={{ marginTop: "14px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
                 Verified against {result.bundle.payload.evidence.length} self-contained onchain evidence records stored in the bundle. No external API was consulted.
+              </div>
+
+              {/* Independent Verifiability Notice (PRD §7/§9) */}
+              <div style={{ margin: "14px 0 0 0", padding: "10px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "6px", fontSize: "0.85rem", color: "var(--text)", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>🔍</span>
+                <span>
+                  Every transaction in this bundle is public. Click any source reference to confirm it yourself on Blockscout, a public blockchain explorer — you don't have to take Signal Passport's word for any of it.
+                </span>
               </div>
 
               {/* Technical Metadata Grid */}

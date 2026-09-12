@@ -53,7 +53,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | **Accepted** |
 | **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Accepted** |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Accepted** |
-| **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Complete (ready for review)** |
+| **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Accepted** |
+| **M8** | Narrative clarity. Added after a second owner review: the numbers still felt meaningless, no sense of who this is for, evidence didn't feel trustworthy to a lay viewer, and the owner kept expecting a verdict that the PRD explicitly forbids providing. | No new metric/score/badge/judgment anywhere; each metric has one honest arithmetic-only context line with no judgment words; a plain "why this exists" paragraph appears before analysis; an explicit "what this is not" statement (not a credit/trust/risk judgment) appears near the metrics, framed as a deliberate design choice per PRD §7/§9; an independent-verifiability sentence appears near the evidence table; no change to any calculation, schema, or API contract. | Exact new copy quoted in full for reviewer wording check; full test suite unchanged; diff showing `packages/`/API untouched; M5 AI tests rerun if its prompt was touched. | **Complete (ready for review)** |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -373,7 +374,26 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
   - `ledgerlens/` still unmodified; byte-cleanliness scan clean; no core logic touched.
   - **P0, P0b, and the submission package (M0–M6) are all now accepted.**
 
-- **M7 — complete (ready for review).** Presentation and narrative polish implemented across both apps:
+- **M7 — accepted.** Reviewer independently verified the actual copy and structure, not the
+  before/after table:
+  - **Reran `npm test` directly**: 63/63 pass. Own `git diff HEAD~1` against `packages/` and
+    both apps' API routes: zero lines changed, confirming scope isolation independently.
+  - **Confirmed the five flagged jargon strings are genuinely gone** — checked both the served
+    HTML and the source, not just the report's table.
+  - **Read both `page.tsx` files in full.** Every rewritten string is computed from real bundle
+    data (`bundle.payload.claims`, `coverage.coverageStatus`, `explanation.isFallback`) — none
+    of it is hardcoded placeholder text. The structural claims are real: the pipeline log
+    genuinely collapses to one line with a working expand toggle that still shows full
+    telemetry on demand; the evidence table is genuinely bounded to 8 rows with a real
+    count-driven "show all N" toggle; technical details are pushed to a clearly-labeled
+    secondary section; App Two's integrity and publication cards are genuinely separate
+    elements, and its AI section has an honest "no narrative attached" fallback message.
+  - **Minor, non-blocking observation** (present in both apps, not introduced by M7 — it's how
+    M4 originally built the top-level banners): the primary warning banner only triggers for
+    `partial` coverage, not `unknown` — an `unknown`-coverage bundle only surfaces that in the
+    secondary technical-details section, not the headline banner. Not worth blocking on.
+  - `ledgerlens/` still unmodified; dev server stopped after verification.
+  - Original implementer report follows below.
   - **Copy rewritten for first-time viewers (Task 1)**: Replaced internal engineering jargon with clear plain-language descriptions across App One and App Two. Replaced "APP ONE: GENERATOR" with "Passport Generator: Portable, tamper-evident onchain credentials for fintech"; replaced "P0B STRETCH SCOPE" / "DISPLAY ONLY" with "Optional Narrative" / "Strictly Grounded"; rephrased the audit note into a clear explanation that narrative text is excluded from the canonical payload; added plain-language lead-ins for coverage statuses (e.g. "All qualifying transactions in this window were retrieved (complete_for_query)").
   - **Narrative restructuring & bounded view (Task 2)**:
     - Added concise above-the-fold explanation of the wallet-passport concept.
@@ -384,9 +404,22 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     - App Two (`apps/consumer`) updated with matching narrative polish: "Offline Verifier" branding, user-friendly step descriptions in the 4-step sequence, plain-language integrity status descriptions with PRD §8 caveats, and bounded metadata grids.
   - **Integrity, tests, and builds verified (Task 4)**: Zero lines of `packages/`, schemas, formulas, or API contracts modified. Full test suite passes (63/63 tests passing). Production builds for both apps succeed. Byte-cleanliness verified: 0 BOMs, 0 control bytes, 0 corrupted `?` bytes across 94 tracked files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
 
+- **M8 — complete (ready for review).** Narrative clarity implemented across App One (`apps/passport`) and App Two (`apps/consumer`) per `docs/prompts/M8-narrative-clarity.md`:
+  - **Gap 1: Arithmetic-only derived context lines**: Added one derived context line per metric card in both App One and App Two. Pure arithmetic with division-by-zero guards (`txCount > 0`, `uniqueRecipients > 0`). Strictly zero judgment words (`healthy`, `good`, `concerning`, `risky`, `suspicious`, `normal`, `unusual`, etc. are entirely absent):
+    - *Observed Transactions*: `"An average of one transaction every ${(windowDays / txCount).toFixed(1)} days"` (e.g. 1.1 days for 28 txs in 30 days).
+    - *Active Days*: `"${activeDays} of ${windowDays} days in this window (${Math.round((activeDays / windowDays) * 100)}%)"` (e.g. "12 of 30 days in this window (40%)").
+    - *Unique Recipients*: `"An average of ${(txCount / uniqueRecipients).toFixed(1)} transactions per recipient"` (e.g. 2.8 for 28 txs to 10 recipients).
+  - **Gap 2: Plain-language problem statement**: Added above wallet input in App One and bundle dropzone in App Two:
+    > "Every fintech app that wants to understand a wallet's activity currently has to build its own pipeline to fetch and interpret blockchain history — over and over, for every app. Signal Passport does that work once: enter a wallet, get a portable record of its verified activity, and any other application can check that record for itself, without re-scanning the blockchain or taking your word for it."
+  - **Gap 3: Concrete independent verifiability sentence**: Positioned prominently directly above the evidence table in App One and near the verification record in App Two:
+    > "Every transaction below is public. Click any row to confirm it yourself on Blockscout, a public blockchain explorer — you don't have to take Signal Passport's word for any of it."
+  - **Gap 4: Explicit "A factual record, not a verdict" callout**: Rendered visibly directly above the 3 metric cards in both apps, framed as an intentional design choice and core principle per PRD §7/§9:
+    > "This is not a credit score, a trust rating, or a risk assessment. It does not identify who owns this wallet or say whether it can be trusted — it shows only what actually happened, with the evidence to check it yourself."
+  - **Strict constraints verified**: No score, tier, badge, or evaluation added anywhere. Zero lines of `packages/`, schemas, formulas, AI prompts, or API routes modified (`git diff packages apps/*/app/api` empty). All 63 tests pass. Both Next.js builds exit 0. `ledgerlens/` untouched at `HEAD bd9b41c`. Byte-cleanliness: 0 BOMs.
+
 ## In Progress
 
-- None. M7 complete and ready for review.
+- None. M8 complete and ready for review.
 
 ## Known Issues
 
