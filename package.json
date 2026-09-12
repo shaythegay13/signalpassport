@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
     "test": "tsx --test",
     "dev:passport": "npm run dev --prefix apps/passport",
