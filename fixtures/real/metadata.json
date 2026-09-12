@@ -1,4 +1,4 @@
-﻿{
+{
   "provider": "Blockscout",
   "base_url": "https://eth.blockscout.com/api/v2",
   "chain": "Ethereum Mainnet",
