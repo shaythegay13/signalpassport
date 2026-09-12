@@ -224,3 +224,42 @@ test("M5 Valid Grounded Output: accepted by validator", () => {
     assert.deepEqual(val.explanation.evidenceIds, ["ev-tx-1", "ev-tx-2"]);
   }
 });
+
+test("AC 3b: An explanation upgrading unknown coverage to sound complete is rejected", () => {
+  const unknownPayload: PassportPayload = {
+    ...testPayload,
+    coverage: {
+      ...testPayload.coverage,
+      coverageStatus: "unknown",
+      isTruncated: false
+    }
+  };
+  const unknownInput = createModelInput(unknownPayload);
+
+  const invalidOutput = {
+    summary: "Observed 28 transactions across 19 active days, capturing the complete transaction history.",
+    evidenceIds: ["ev-tx-1"]
+  };
+
+  const validation = validateAiExplanation(invalidOutput, unknownInput, unknownPayload, "test-model");
+  assert.equal(validation.valid, false, "Coverage upgrade on unknown data must be rejected");
+  assert.match(validation.error, /improperly claims complete coverage \("complete"\) when coverage is unknown/i);
+});
+
+test("M5 Observation Window Dates: summary containing real window as ISO and formatted date strings validates cleanly", () => {
+  // ISO date format (2026-08-13 to 2026-09-12)
+  const isoOutput = {
+    summary: "During the 30-day UTC observation window from 2026-08-13 to 2026-09-12, the address recorded 28 transactions across 19 active days to 16 recipients.",
+    evidenceIds: ["ev-tx-1", "ev-tx-2"]
+  };
+  const isoVal = validateAiExplanation(isoOutput, modelInput, testPayload, "test-model");
+  assert.equal(isoVal.valid, true, `ISO date summary should validate but failed: ${!isoVal.valid ? (isoVal as any).error : ""}`);
+
+  // Human-readable date format (August 13, 2026 to September 12, 2026)
+  const readableOutput = {
+    summary: "From August 13, 2026 to September 12, 2026, the address completed 28 transactions across 19 active days.",
+    evidenceIds: ["ev-tx-1"]
+  };
+  const readableVal = validateAiExplanation(readableOutput, modelInput, testPayload, "test-model");
+  assert.equal(readableVal.valid, true, `Readable date summary should validate but failed: ${!readableVal.valid ? (readableVal as any).error : ""}`);
+});

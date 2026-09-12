@@ -15,8 +15,8 @@ export function createModelInput(payload: PassportPayload): ModelInput {
     units: c.units
   }));
 
-  // Summarize evidence to essential ID and transaction metadata (capped at 50 records for context budget)
-  const evidence = (payload.evidence || []).slice(0, 50).map((e) => ({
+  // Summarize evidence to essential ID and transaction metadata (capped at 15 records per PRD §10)
+  const evidence = (payload.evidence || []).slice(0, 15).map((e) => ({
     evidenceId: e.evidenceId,
     transactionHash: e.transactionHash,
     timestamp: e.timestamp,

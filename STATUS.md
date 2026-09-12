@@ -51,7 +51,7 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Accepted** |
 | **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | **Accepted** |
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | **Accepted** |
-| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Complete — ready for review** |
+| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Fixes requested** |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | Not started |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
@@ -245,7 +245,48 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 
 ## In Progress
 
-- **M5** — Complete, ready for reviewer inspection and acceptance.
+- **M5 — fixes requested.** Reviewer independently reran the live AI path against the actual
+  repo state, not the implementer's report, and found the shipped app's default path is
+  currently non-functional:
+  - **Reran `npm test` directly**: 60/60 pass. Independently recomputed the digest-invariance
+    claim (AC5) and confirmed byte-identical output with/without the `explanation` field.
+  - **Read `validation.ts` line-by-line** and found two real correctness gaps: (1) the
+    invented-number check extracts digit runs with `\b\d+\b`, which splits an ISO date like
+    `2026-08-13` into separate tokens `2026`/`08`/`13` — `08` and `13` aren't in the allowed
+    set, so a fully honest explanation that happens to mention the observation window as a
+    date gets **falsely rejected** as containing an invented number. Reproduced directly by
+    constructing exactly such an input. (2) The coverage-upgrade check
+    (`payload.coverage.coverageStatus === "partial"`) never fires when coverage is `unknown` —
+    an explanation claiming "complete transaction history" under `unknown` coverage passes
+    validation. Reproduced directly.
+  - **Found `.env.local` was copied wholesale from `ledgerlens/.env.local`**, not just the two
+    AI key values as the M5 prompt explicitly instructed — confirmed via file metadata (modify
+    time matches `ledgerlens/.env.local` exactly; birth time is today), and via the variable
+    names present (`NEXT_PUBLIC_SUPABASE_*`, `PRISMTRACE_*` — irrelevant to Signal Passport).
+  - **This wholesale copy is the root cause of a live, reproducible defect**: it carried over
+    LedgerLens's `AI_PROVIDER` value, which resolves Signal Passport's default provider to
+    Anthropic. `packages/analysis/src/ai/provider.ts` hardcodes the Anthropic model ID
+    `claude-3-5-sonnet-20241022`, which is stale/deprecated and returns a live HTTP 404 from
+    Anthropic's API (reproduced directly, real request, real 404 response). Confirmed
+    `apps/passport/app/api/explain/route.ts` calls `generateExplanation` with no provider
+    override, so it inherits this default. **Net effect: right now, every "Generate AI
+    explanation" click in the live shipped app silently falls back to the deterministic
+    template and never surfaces a real model response** — directly contradicting the report's
+    AC6 claim, reproduced on the actual current repo state, not a hypothetical.
+  - **The underlying logic is sound once isolated**: forcing the Groq provider explicitly
+    (bypassing the broken default) produced a genuine, live, validated model response citing
+    real evidence IDs — including hitting an authentic Groq rate-limit response (real org ID,
+    real token accounting), confirming the calls are genuinely live, not mocked. The fix is
+    narrow: correct the Anthropic model ID, and stop the `.env.local` value from silently
+    overriding the intended default.
+  - Fixes requested, in priority order: (1) replace `signal-passport/.env.local` with only the
+    two AI key values plus an explicit, correct `AI_PROVIDER` for this project — do not inherit
+    LedgerLens's value; (2) fix the stale Anthropic model ID in `provider.ts` (LedgerLens's own
+    already-proven-correct reference uses `claude-sonnet-5` — use the current correct ID, and
+    verify it live, not just by reading the string); (3) fix the number-validator to not
+    false-positive on the payload's own observation-window dates; (4) extend the
+    coverage-upgrade check to also cover `unknown`, not only `partial`.
+  - Full report: `docs/verification/M5.md`.
 
 ## Not Started
 

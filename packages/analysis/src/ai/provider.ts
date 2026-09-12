@@ -10,7 +10,7 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
   anthropic: {
     id: "anthropic",
     label: "Anthropic",
-    modelId: "claude-3-5-sonnet-20241022",
+    modelId: "claude-sonnet-4-5-20250929",
     apiKeyVariable: "ANTHROPIC_API_KEY"
   }
 };

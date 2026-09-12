@@ -46,21 +46,77 @@ export function validateAiExplanation(
   }
 
   // (c) No invented numbers
-  // Allowed numbers: claim values, chain ID, and start/end window dates if mentioned
+  // Allowed numbers: claim values, chain ID, evidence counts, and observation window dates/tokens
   const allowedNumbers = new Set<string>();
   allowedNumbers.add(String(payload.sourceChainId)); // e.g. 1
   for (const claim of payload.claims) {
     allowedNumbers.add(String(claim.value));
   }
-  // Allow year numbers if in window (e.g. 2026, 30 for 30-day)
-  allowedNumbers.add("30");
-  const startYear = new Date(payload.observationWindow.startUtc).getUTCFullYear();
-  const endYear = new Date(payload.observationWindow.endUtc).getUTCFullYear();
-  allowedNumbers.add(String(startYear));
-  allowedNumbers.add(String(endYear));
+  allowedNumbers.add(String(payload.evidence.length));
 
-  // Extract standalone numbers from text
-  const foundNumbers = summary.match(/\b\d+(?:\.\d+)?\b/g) || [];
+  // Extract observation window dates and components
+  const startDate = new Date(payload.observationWindow.startUtc);
+  const endDate = new Date(payload.observationWindow.endUtc);
+
+  // Window duration in days (e.g. 30)
+  const windowDurationDays = Math.round(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  allowedNumbers.add(String(windowDurationDays));
+  allowedNumbers.add("30"); // standard fallback for 30-day window
+
+  // Add date components (year, month 1-12, zero-padded month, day 1-31, zero-padded day)
+  const startYear = startDate.getUTCFullYear();
+  const startMonth = startDate.getUTCMonth() + 1;
+  const startDay = startDate.getUTCDate();
+  allowedNumbers.add(String(startYear));
+  allowedNumbers.add(String(startMonth));
+  allowedNumbers.add(String(startMonth).padStart(2, "0"));
+  allowedNumbers.add(String(startDay));
+  allowedNumbers.add(String(startDay).padStart(2, "0"));
+
+  const endYear = endDate.getUTCFullYear();
+  const endMonth = endDate.getUTCMonth() + 1;
+  const endDay = endDate.getUTCDate();
+  allowedNumbers.add(String(endYear));
+  allowedNumbers.add(String(endMonth));
+  allowedNumbers.add(String(endMonth).padStart(2, "0"));
+  allowedNumbers.add(String(endDay));
+  allowedNumbers.add(String(endDay).padStart(2, "0"));
+
+  // Also strip known formatted window dates from a working copy of summary
+  let sanitizedSummary = summary;
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const shortMonthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  // Strip exact ISO strings and YYYY-MM-DD
+  sanitizedSummary = sanitizedSummary
+    .replaceAll(payload.observationWindow.startUtc, " ")
+    .replaceAll(payload.observationWindow.endUtc, " ")
+    .replaceAll(payload.observationWindow.startUtc.slice(0, 10), " ")
+    .replaceAll(payload.observationWindow.endUtc.slice(0, 10), " ");
+
+  // Strip human-readable date formats (e.g., "August 13, 2026", "13 August 2026", "Aug 13, 2026")
+  const datePatterns = [
+    new RegExp(`\\b${monthNames[startMonth - 1]}\\s+${startDay}(?:st|nd|rd|th)?,?\\s+${startYear}\\b`, "gi"),
+    new RegExp(`\\b${shortMonthNames[startMonth - 1]}\\s+${startDay}(?:st|nd|rd|th)?,?\\s+${startYear}\\b`, "gi"),
+    new RegExp(`\\b${startDay}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${monthNames[startMonth - 1]},?\\s+${startYear}\\b`, "gi"),
+    new RegExp(`\\b${monthNames[endMonth - 1]}\\s+${endDay}(?:st|nd|rd|th)?,?\\s+${endYear}\\b`, "gi"),
+    new RegExp(`\\b${shortMonthNames[endMonth - 1]}\\s+${endDay}(?:st|nd|rd|th)?,?\\s+${endYear}\\b`, "gi"),
+    new RegExp(`\\b${endDay}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${monthNames[endMonth - 1]},?\\s+${endYear}\\b`, "gi")
+  ];
+  for (const pat of datePatterns) {
+    sanitizedSummary = sanitizedSummary.replace(pat, " ");
+  }
+
+  // Extract standalone numbers from sanitized text
+  const foundNumbers = sanitizedSummary.match(/\b\d+(?:\.\d+)?\b/g) || [];
   for (const num of foundNumbers) {
     if (!allowedNumbers.has(num)) {
       return {
@@ -70,13 +126,15 @@ export function validateAiExplanation(
     }
   }
 
-  // (d) No coverage status upgrade
-  if (payload.coverage.coverageStatus === "partial") {
-    const upgradeMatch = summary.match(/\b(complete|completely|all transactions|full history|entire history|exhaustive|comprehensively)\b/i);
+  // (d) No coverage status upgrade (cannot claim completeness if coverage is partial or unknown)
+  if (payload.coverage.coverageStatus !== "complete_for_query") {
+    const upgradeMatch = summary.match(
+      /\b(complete|completely|all transactions|full history|entire history|exhaustive|comprehensively)\b/i
+    );
     if (upgradeMatch) {
       return {
         valid: false,
-        error: `The explanation improperly claims complete coverage ("${upgradeMatch[0]}") when coverage is partial.`
+        error: `The explanation improperly claims complete coverage ("${upgradeMatch[0]}") when coverage is ${payload.coverage.coverageStatus}.`
       };
     }
   }
