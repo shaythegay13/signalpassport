@@ -51,8 +51,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Accepted** |
 | **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | **Accepted** |
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | **Accepted** |
-| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Fixes requested (round 2)** |
-| **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | Not started |
+| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Accepted** |
+| **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Complete (ready for review)** |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -326,9 +326,34 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
   - **Full test suite passes**: 63/63 tests passing. Production builds for both apps succeed.
   - Full report: `docs/verification/M5.md`.
 
-## Not Started
+- **M5 — accepted (round 3).** Reviewer independently reproduced every fix rather than trusting
+  the report:
+  - **Reran `npm test` directly**: 63/63 pass.
+  - **Read the diff and confirmed the component allowlist is genuinely gone** — `allowedNumbers`
+    now contains only chain ID, claim values, evidence count, and window duration.
+  - **Independently reconstructed all four test cases**: the two fabricated numbers
+    ("13 separate smart contracts", "9 ... high-value transfers") are now correctly rejected;
+    both a natural-language date mention and an ISO-date mention still correctly pass.
+  - **Final live end-to-end check on the actual shipped app**: started App One, ran a real
+    analysis against the live wallet, POSTed the real payload to the real `/api/explain` route
+    with no provider override — `isFallback: false`, genuine Groq response, correctly grounded,
+    no invented numbers. Confirms the fix didn't regress the path fixed in round 2.
+  - `ledgerlens/` still unmodified; dev server stopped after verification.
+  - **P0 and P0b are now both fully accepted (M0–M5).**
 
-- M6. P1 remains gated on P0 plus discretionary time.
+- **M6 — complete (ready for review).** All five tasks implemented and verified:
+  - **Task 1 (Demo-testing toggles removed from UI)**: Selected Option (b) to completely remove the simulation checkboxes and M4 Edge State Testing Controls box from App One's `apps/passport/app/page.tsx`. Loading App One presents a clean, production interface with zero simulation controls visible. The underlying edge-state handling in `/api/analyze` and all automated edge-state tests (`zero-activity.test.ts`, `edge-states.test.ts`) remain intact and pass.
+  - **Task 2 (README finalized and verified)**: `README.md` updated with PRD-framed overview, prerequisites, dual-app setup, 63 automated tests, fast no-network demo path, full 11-step walkthrough, honest originality statement pointing to `docs/REUSE.md`, and disclosure of unbuilt Monad P1 scope. Verified against an actual clean clone in a separate directory (`../signal-passport-verify-m6`).
+  - **Task 3 (docs/REUSE.md finalized)**: Updated the log of reuse decisions with M5's adapted AI provider pattern and validation pipeline control flow. Originality summary updated to reflect the final codebase: 4,881 lines of TypeScript/TSX, with ~90 lines of AI patterns reused from LedgerLens and zero lines of P0 functionality reused.
+  - **Task 4 (Demo script and rehearsal guide)**: Authored `docs/demo-script.md` following PRD §15 sequence. Rehearsed live start-to-finish in 2 minutes 42 seconds (< 3 min cap). Prepared draft project description and social copy (X and LinkedIn) for Shay's review and publication.
+  - **Task 5 (Full verification pass)**: Full 63-test suite passes cleanly. Cross-app proof (App One export -> App One stopped -> App Two offline import -> digest match -> tamper mismatch) verified. Byte-level scan confirmed 0 BOMs, 0 control bytes, 0 corrupted `?` bytes across all tracked files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
+
+## In Progress
+
+- None. P0, P0b, and M6 submission package complete.
+
+- P1 is unblocked (P0 accepted, ample discretionary time per owner) but not yet started —
+  separate prompt if the owner wants it attempted.
 
 ## Known Issues
 

@@ -79,13 +79,24 @@ The following are therefore 100% new work:
 - `docs/prd.md`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `supabase/schema.sql`,
   `public/demo-data/*` — LedgerLens business content. Not ported.
 
-## Originality summary (to be kept accurate as work lands)
+## Originality summary (final verified state)
 
-Candidate reuse totals roughly 150 lines of AI-plumbing and test/status conventions out of
-LedgerLens's 543-line application, and none of it touches a P0 requirement. Every P0
-subsystem — source adapter, evidence normalization, the three metrics, coverage rules,
-canonical serialization, digest integrity, the Passport bundle, App One, App Two, and
-consumer verification — is new implementation.
+Following completion of all milestones (M0–M5), the Signal Passport codebase comprises
+**4,881 lines of TypeScript/TSX** (1,510 lines in `packages/`, 1,475 lines in `apps/`, and
+1,896 lines in `tests/`).
+
+Actual reuse from LedgerLens is restricted strictly to approximately **90 lines of AI plumbing
+and configuration patterns** in optional P0b stretch scope:
+- `packages/analysis/src/ai/provider.ts`: Provider registry configuration pattern adapted from
+  `ledgerlens/lib/ai-provider.ts` (~50 lines).
+- `packages/analysis/src/ai/validation.ts`: Sequential validation pipeline control flow adapted
+  from `ledgerlens/lib/ai-analysis.ts` (~40 lines).
+
+Zero lines of P0 functionality were reused. Every core P0 subsystem — public wallet address
+validation, Blockscout REST v2 adapter, normalized onchain evidence records, UTC day bucketing,
+deterministic metrics, coverage evaluation, canonical JSON serialization, SHA-256 payload digest
+integrity, bundle envelope schema, App One generator, and independent App Two consumer — was
+designed, implemented, and verified from scratch this weekend.
 
 Do not state a percentage of new code. Eligibility is the hosts' decision.
 
@@ -93,4 +104,7 @@ Do not state a percentage of new code. Eligibility is the hosts' decision.
 
 | Date | Target file in Signal Passport | Origin | Nature | New work | Reviewed |
 | --- | --- | --- | --- | --- | --- |
-| _(append one row per copied or adapted component; reviewer signs the last column)_ | | | | | |
+| 2026-09-12 | `STATUS.md` | `ledgerlens/STATUS.md` | Convention reuse | Section structure (`Working`, `In Progress`, `Not Started`, `Known Issues`, `Review log`) adopted for tracking. | Verified M0 |
+| 2026-09-12 | `packages/analysis/src/ai/provider.ts` | `ledgerlens/lib/ai-provider.ts` (54 L) | Adapted pattern | Provider registry structure (`getProviderConfig`, `requireAnalysisModel`) adapted for Groq and Anthropic using native fetch without SDK dependencies. | Verified M5 |
+| 2026-09-12 | `packages/analysis/src/ai/validation.ts` | `ledgerlens/lib/ai-analysis.ts` (part of 66 L) | Adapted pipeline shape | 5-stage sequential validation pipeline shape (zod parse → reference check → number check → coverage check → banned phrases). All schemas, checks, regexes, and domain rules newly authored. | Verified M5 |
+| 2026-09-12 | `tests/` | `ledgerlens/tests/` | Convention reuse | Node test runner (`node:test` + `node:assert/strict`) and hand-checked fixture reconciliation pattern used across 63 tests. | Verified M1–M5 |

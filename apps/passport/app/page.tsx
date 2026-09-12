@@ -28,11 +28,6 @@ export default function PassportApp() {
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [explainError, setExplainError] = useState<string | null>(null);
 
-  // Simulation toggles for M4 edge states
-  const [simulateZeroActivity, setSimulateZeroActivity] = useState<boolean>(false);
-  const [simulatePartial, setSimulatePartial] = useState<boolean>(false);
-  const [simulateProviderError, setSimulateProviderError] = useState<boolean>(false);
-
   function handleAddressChange(val: string) {
     setAddressInput(val);
     if (!val.trim()) {
@@ -76,9 +71,7 @@ export default function PassportApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: cleanAddress,
-          maxPages: simulatePartial ? 1 : 10,
-          simulateEmptyActivity: simulateZeroActivity,
-          simulateProviderError: simulateProviderError
+          maxPages: 10
         })
       });
 
@@ -275,44 +268,6 @@ export default function PassportApp() {
               {EXAMPLE_SUBJECT}
             </button>
             <span style={{ marginLeft: "6px" }}>(Frozen M0 test EOA with 28 qualifying txs)</span>
-          </div>
-
-          <div style={{ marginTop: "16px", padding: "12px 16px", background: "var(--surface-raised)", borderRadius: "6px", border: "1px solid var(--border)" }}>
-            <div style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-dim)", marginBottom: "8px", fontWeight: 600 }}>
-              M4 Edge State Testing Controls (PRD §14)
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", fontSize: "0.85rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={simulateZeroActivity}
-                  onChange={(e) => {
-                    setSimulateZeroActivity(e.target.checked);
-                    if (e.target.checked) setSimulateProviderError(false);
-                  }}
-                />
-                <span>Simulate Zero Activity</span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={simulatePartial}
-                  onChange={(e) => setSimulatePartial(e.target.checked)}
-                />
-                <span>Simulate Partial Coverage (Cap 1 page)</span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={simulateProviderError}
-                  onChange={(e) => {
-                    setSimulateProviderError(e.target.checked);
-                    if (e.target.checked) setSimulateZeroActivity(false);
-                  }}
-                />
-                <span>Simulate Provider Outage (HTTP 503)</span>
-              </label>
-            </div>
           </div>
         </form>
 
