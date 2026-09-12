@@ -35,7 +35,7 @@ export function toChecksumAddress(address: string): string {
  *    specification (keccak256 of lowercase hex characters; if nibble >= 8 uppercase, else lowercase).
  *    A mixed-case address with an invalid checksum is rejected.
  *
- * IMPORTANT DISCLAIMER (PRD ?4 P0 item 2):
+ * IMPORTANT DISCLAIMER (PRD §4 P0 item 2):
  * Validating an address verifies only its syntactic structure and cryptographic checksum format.
  * Address validation or entry DOES NOT prove wallet control, ownership, or custody.
  */

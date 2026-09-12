@@ -50,8 +50,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M1** | Evidence foundation: address validation, adapter to normalized evidence, three deterministic metrics, dedup, UTC bucketing, coverage status. | Metrics match hand-checked expected values on a small fixture; duplicate `(chainId, txHash)` records do not inflate counts; UTC calendar-date boundaries correct at both edges; a provider error surfaces as an error and never as zero activity; coverage is one of `complete_for_query` / `partial` / `unknown` with truncation and pagination recorded. | Passing test run output; the hand-checked expected values and how they were derived; a test proving error is not zero. | **Accepted** |
 | **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Accepted** |
 | **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | **Accepted** |
-| **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | Complete (ready for review) |
-| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | Blocked by gate |
+| **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | **Accepted** |
+| **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Complete — ready for review** |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | Not started |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
@@ -202,13 +202,54 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
   - **Task 5 (Clean clone walkthrough)**: Standalone `README.md` created and verified via a clean clone into `../signal-passport-clean-test`. Root install, app installs, test suite (53/53 passing), and Next.js production builds for both apps verified. Clean clone deleted.
   - **Byte cleanliness**: Repo-wide scan reports 0 BOMs, 0 control bytes, 0 corrupted `?` substitutions. All 53 tests pass. Full report in `docs/verification/M4.md`.
 
+- **M4 — accepted.** Reviewer independently reproduced the edge states live rather than
+  trusting the transcript:
+  - **Reran `npm test` directly**: 53/53 pass, including both new Task 0 tests.
+  - **Started App One live and hit the real API directly**, bypassing the UI: sent
+    `maxPages: 1` and got back a **genuinely live** partial-coverage result from real
+    Blockscout (`coverageStatus: "partial"`, `isTruncated: true`) — not simulated data; the
+    metric values happened to match the complete run (28/12/10) since all qualifying
+    transactions were in page 1, a good case proving coverage isn't silently upgraded just
+    because the numbers look complete. Sent `simulateEmptyActivity: true` and confirmed the
+    real downstream pipeline (normalize → metrics → coverage → bundle) produces `claims: []`
+    with no crash — the actual Task 0 fix, exercised end to end. Sent a malformed address
+    directly and got HTTP 400 with the real validator's message, before any network call.
+  - **Read `route.ts` in full**: confirmed "Simulate Provider Error" throws a hardcoded string
+    rather than triggering a genuine network failure — weaker than the partial-coverage test,
+    though within what the M4 prompt explicitly allowed ("mocking the fetch in a way you can
+    demonstrate"). Noted, not blocking.
+  - **Repo-wide corruption scan rerun independently**: clean, both failure modes.
+  - `ledgerlens/` still unmodified; git history clean; dev servers started for this review
+    stopped afterward.
+  - **Two non-blocking notes carried forward to M6**: (1) commit message says "configure npm
+    workspaces" but the actual diff only adds `--prefix` convenience scripts, no `workspaces`
+    field — harmless inaccuracy, not a real defect. (2) The "Simulate Zero Activity / Partial
+    Coverage / Provider Outage" checkboxes are visible in the **live production UI**, not
+    behind a dev flag — good for verification, but should be removed or hidden before the
+    demo video so a judge doesn't see test toggles during the pitch.
+  - Full reproduction steps: `docs/verification/M4.md`.
+
+- **M5 — complete (ready for review).**
+  - **All 10 acceptance criteria satisfied and verified.**
+  - **Automated test suite expanded to 60 tests (`npm test`: 60/60 passing).** Tests cover invented number rejection (AC 1), unresolvable evidence ID rejection (AC 2), coverage upgrade on partial data rejection (AC 3), simulated model failure fallback without throwing (AC 4), `computePayloadDigest` byte-identical invariance (AC 5), and banned causality/identity phrase rejection.
+  - **Provider registry wired** (`packages/analysis/src/ai/provider.ts`): Pluggable HTTP fetch implementation supporting Groq (`openai/gpt-oss-120b`, `GROQ_API_KEY`) and Anthropic (`claude-3-5-sonnet-20241022`, `ANTHROPIC_API_KEY`).
+  - **Live provider verification (AC 6)**: Real Groq request against frozen M0 fixture returned valid output in 1658 ms citing 3 verified evidence IDs (`1:0xfa528e...`, `1:0x854cf8...`, `1:0x431b27...`), validated on Attempt 1 (`isFallback: false`).
+  - **Strict 5-rule sequential validation pipeline** (`packages/analysis/src/ai/validation.ts`): (1) Zod schema parse, (2) evidence reference membership check, (3) verbatim numbers only, (4) coverage integrity preservation, (5) no identity/custody or causal speculation phrases.
+  - **Resilient non-blocking failure policy (PRD §4 invariant)**: 1 repair attempt feeding back the rejection reason, followed by automatic deterministic template fallback (`generateDeterministicExplanation`). Never throws; never blocks Passport generation or export.
+  - **Envelope sibling schema preservation**: `PassportPayload` is untouched; `explanation` is an optional sibling on `PassportBundle`. `computePayloadDigest` is bit-for-bit identical with or without explanation.
+  - **App One integration (`apps/passport`)**: AI Qualitative Synthesis card with generate button, model attribution badge, fallback status indicator, verified evidence pills, and export bundling.
+  - **App Two integration (`apps/consumer`)**: Independent offline import renders unverified qualitative display card with explicit non-payload disclaimer, strictly separated from cryptographic integrity results.
+  - **Byte-level cleanliness verified**: 0 BOMs, 0 control bytes, 0 corrupted `?` bytes across all 93 repo files.
+  - `ledgerlens/` untouched (`HEAD bd9b41c`, clean working tree).
+  - Full report: `docs/verification/M5.md`.
+
 ## In Progress
 
-- None. M4 completed; awaiting technical lead review to open M5 gate.
+- **M5** — Complete, ready for reviewer inspection and acceptance.
 
 ## Not Started
 
-- M5 and M6. P0b and P1 remain gated.
+- M6. P1 remains gated on P0 plus discretionary time.
 
 ## Known Issues
 

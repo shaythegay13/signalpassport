@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { validateEthereumAddress } from "@signal-passport/analysis";
 import { METRIC_LABELS } from "@signal-passport/analysis";
-import type { PassportBundle, Claim, EvidenceRecord } from "@signal-passport/schema";
+import type { PassportBundle, Claim, EvidenceRecord, AiExplanation } from "@signal-passport/schema";
 
 const EXAMPLE_SUBJECT = "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8";
 
@@ -14,7 +14,7 @@ type PipelineStep = {
 };
 
 export default function PassportApp() {
-  const [addressInput, setAddressInput] = useState<string>("");
+  const [addressInput, setAddressInput] = useState<string>("" );
   const [addressError, setAddressError] = useState<string | null>(null);
   const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [currentStage, setCurrentStage] = useState<string>("idle");
@@ -22,6 +22,11 @@ export default function PassportApp() {
   const [selectedMetricType, setSelectedMetricType] = useState<string>("observed_transaction_count");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProviderError, setIsProviderError] = useState<boolean>(false);
+
+  // M5 AI Explanation state (P0b stretch scope)
+  const [explanation, setExplanation] = useState<AiExplanation | null>(null);
+  const [isExplaining, setIsExplaining] = useState<boolean>(false);
+  const [explainError, setExplainError] = useState<string | null>(null);
 
   // Simulation toggles for M4 edge states
   const [simulateZeroActivity, setSimulateZeroActivity] = useState<boolean>(false);
@@ -59,6 +64,9 @@ export default function PassportApp() {
     setErrorMessage(null);
     setIsProviderError(false);
     setBundle(null);
+    setExplanation(null);
+    setExplainError(null);
+    setIsExplaining(false);
     setSteps([]);
     setCurrentStage("fetching");
 
@@ -149,9 +157,44 @@ export default function PassportApp() {
     }
   }
 
+  async function handleGenerateExplanation() {
+    if (!bundle) return;
+    setIsExplaining(true);
+    setExplainError(null);
+
+    try {
+      const res = await fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: bundle.payload })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ error: "Failed to generate explanation" }));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.explanation) {
+        setExplanation(data.explanation);
+      } else {
+        throw new Error("No explanation returned from API");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setExplainError(msg);
+    } finally {
+      setIsExplaining(false);
+    }
+  }
+
   function handleExport() {
     if (!bundle) return;
-    const jsonString = JSON.stringify(bundle, null, 2);
+    const bundleToExport: PassportBundle = {
+      ...bundle,
+      ...(explanation ? { explanation } : {})
+    };
+    const jsonString = JSON.stringify(bundleToExport, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -408,6 +451,96 @@ export default function PassportApp() {
                 </div>
               );
             })}
+          </div>
+
+          {/* AI Qualitative Explanation (P0b Stretch Scope - PRD §10) */}
+          <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface-raised)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <h4 style={{ margin: 0, fontSize: "1rem" }}>AI Qualitative Synthesis</h4>
+                <span className="badge" style={{ background: "rgba(88, 166, 255, 0.15)", color: "#58a6ff", borderColor: "rgba(88, 166, 255, 0.4)" }}>
+                  P0b Stretch Scope
+                </span>
+                <span className="badge badge-neutral">Display Only</span>
+              </div>
+              {!explanation && !isExplaining && (
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={handleGenerateExplanation}
+                  style={{ fontSize: "0.85rem", padding: "7px 14px" }}
+                >
+                  ✨ Generate AI Explanation
+                </button>
+              )}
+              {explanation && (
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleGenerateExplanation}
+                  disabled={isExplaining}
+                >
+                  {isExplaining ? "Regenerating..." : "↻ Regenerate Explanation"}
+                </button>
+              )}
+            </div>
+
+            <p style={{ color: "var(--text-muted)", fontSize: "0.83rem", margin: "0 0 14px 0" }}>
+              Qualitative summary strictly grounded in immutable claims and evidence records. Failure of model calls never blocks Passport generation, verification, or export (PRD §4 invariant).
+            </p>
+
+            {isExplaining && (
+              <div style={{ padding: "14px 16px", background: "var(--bg)", borderRadius: "6px", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                <span>⏳</span> Querying model & validating claims (verifying verbatim numbers, coverage integrity, and evidence citations)...
+              </div>
+            )}
+
+            {explainError && (
+              <div style={{ padding: "12px 14px", background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", borderRadius: "6px", color: "var(--danger)", fontSize: "0.85rem", marginBottom: "12px" }}>
+                <strong>AI Explanation Notice:</strong> {explainError}.
+                <div style={{ marginTop: "4px", color: "var(--text-dim)", fontSize: "0.8rem" }}>
+                  Passport integrity and claims remain completely unaffected. You can still export the passport bundle.
+                </div>
+              </div>
+            )}
+
+            {explanation && (
+              <div style={{ padding: "16px", background: "var(--bg)", borderRadius: "6px", border: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "10px", flexWrap: "wrap" }}>
+                  <span className="badge">Model: {explanation.model}</span>
+                  <span className={`badge ${explanation.isFallback ? "badge-warning" : "badge-success"}`}>
+                    {explanation.isFallback ? "Deterministic Fallback" : "Grounded & Verified"}
+                  </span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginLeft: "auto" }}>
+                    Generated: {explanation.generatedAt.replace("T", " ").replace(".000Z", " UTC")}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: "0.95rem", lineHeight: 1.6, margin: "0 0 12px 0", color: "var(--text)" }}>
+                  "{explanation.summary}"
+                </p>
+
+                <div style={{ borderTop: "1px solid var(--surface-raised)", paddingTop: "10px", marginTop: "10px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  <strong style={{ color: "var(--text)" }}>Grounded Evidence References:</strong>{" "}
+                  {explanation.evidenceIds.length === 0 ? (
+                    <span>0 citations</span>
+                  ) : (
+                    <span>
+                      {explanation.evidenceIds.length} verified record(s):{" "}
+                      {explanation.evidenceIds.map((id, idx) => (
+                        <span key={id} style={{ fontFamily: "var(--font-mono)", color: "var(--accent)", marginRight: "6px" }}>
+                          {id.slice(0, 16)}...{idx < explanation.evidenceIds.length - 1 ? "," : ""}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "var(--text-dim)" }}>
+                  Audit Note: This explanation is qualitative display text on the envelope. It does not alter or participate in the SHA-256 payload digest.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Evidence Drill-down */}

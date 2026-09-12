@@ -2,6 +2,7 @@ import { z } from "zod";
 import { evidenceRecordSchema, type EvidenceRecord } from "./evidence.js";
 import { claimSchema, type Claim } from "./claim.js";
 import { coverageRecordSchema, type CoverageRecord } from "./coverage.js";
+import { aiExplanationSchema, type AiExplanation } from "./explanation.js";
 
 /**
  * Observation window schema for Passport payload.
@@ -81,7 +82,8 @@ export const passportBundleSchema = z.object({
   schema_version: z.string().min(1),
   payload: passportPayloadSchema,
   integrity: integrityRecordSchema,
-  publication: publicationRecordSchema
+  publication: publicationRecordSchema,
+  explanation: aiExplanationSchema.optional()
 });
 
 export type PassportBundle = z.infer<typeof passportBundleSchema>;

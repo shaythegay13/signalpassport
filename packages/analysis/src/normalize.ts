@@ -21,7 +21,7 @@ export type ItemQualificationResult = {
 
 /**
  * Normalizes a raw Blockscout transaction item into a validated EvidenceRecord
- * if it meets the qualifying scope defined in PRD ?7:
+ * if it meets the qualifying scope defined in PRD §7:
  * - Direction: Outgoing transaction initiated by the subject wallet
  * - Status: Successful (status === "ok" / result === "success")
  * - Window: Timestamp falls within the declared [startUtc, endUtc] observation window
@@ -102,7 +102,7 @@ export function normalizeBlockscoutItem(
 
 /**
  * Deduplicates EvidenceRecords by chain ID + transaction hash.
- * PRD ?7: "Deduplicate transactions by chain ID plus transaction hash."
+ * PRD §7: "Deduplicate transactions by chain ID plus transaction hash."
  */
 export function deduplicateEvidence(records: EvidenceRecord[]): EvidenceRecord[] {
   const seen = new Set<string>();

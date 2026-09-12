@@ -13,7 +13,7 @@ export type DetermineCoverageOptions = {
 };
 
 /**
- * Computes the coverage status and associated pagination metadata per PRD ?7:
+ * Computes the coverage status and associated pagination metadata per PRD §7:
  * - "complete_for_query": paginated to next_page_params: null within declared window without truncation
  * - "partial": provider indicated more data exists beyond what was fetched, or query hit page limit / mid-fetch error
  * - "unknown": coverage could not be conclusively determined

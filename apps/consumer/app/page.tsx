@@ -242,6 +242,51 @@ export default function ConsumerApp() {
               <div style={{ marginTop: "16px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
                 Contains {result.bundle.payload.evidence.length} self-contained evidence records. No external API was consulted.
               </div>
+
+              {/* Imported AI Explanation (PRD §10 - Display Only) */}
+              {result.bundle.explanation ? (
+                <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface-raised)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <h4 style={{ margin: 0, fontSize: "1rem" }}>Imported Qualitative Explanation</h4>
+                      <span className="badge badge-neutral">Display Only</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <span className="badge">Model: {result.bundle.explanation.model}</span>
+                      <span className={`badge ${result.bundle.explanation.isFallback ? "badge-warning" : "badge-success"}`}>
+                        {result.bundle.explanation.isFallback ? "Deterministic Fallback" : "LLM Grounded"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "rgba(210, 153, 34, 0.1)", border: "1px solid rgba(210, 153, 34, 0.3)", borderRadius: "6px", padding: "10px 14px", margin: "10px 0 14px 0", fontSize: "0.82rem", color: "var(--warning)" }}>
+                    <strong>Non-Payload Display Metadata:</strong> This qualitative explanation was attached to the envelope by the generator. It is NOT part of the canonical payload and is NOT verified by the cryptographic SHA-256 integrity check.
+                  </div>
+
+                  <p style={{ fontSize: "0.95rem", lineHeight: 1.6, margin: "12px 0", color: "var(--text)" }}>
+                    "{result.bundle.explanation.summary}"
+                  </p>
+
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", borderTop: "1px solid var(--border)", paddingTop: "10px", marginTop: "12px" }}>
+                    <strong style={{ color: "var(--text)" }}>Cited Evidence Records ({result.bundle.explanation.evidenceIds.length}):</strong>{" "}
+                    {result.bundle.explanation.evidenceIds.length === 0 ? (
+                      <span>0 citations</span>
+                    ) : (
+                      <span>
+                        {result.bundle.explanation.evidenceIds.map((id, idx) => (
+                          <span key={id} style={{ fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginRight: "6px" }}>
+                            {id.slice(0, 16)}...{idx < (result.bundle?.explanation?.evidenceIds.length ?? 0) - 1 ? "," : ""}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: "20px", padding: "12px 16px", background: "var(--surface)", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "0.82rem", color: "var(--text-dim)" }}>
+                  No optional AI explanation attached to this bundle. (Envelopes without explanations are valid and fully verifiable).
+                </div>
+              )}
             </div>
           )}
         </section>

@@ -4,7 +4,7 @@ import { z } from "zod";
  * Derives a stable, chain-scoped evidence ID for transaction-level evidence.
  * Format: `${chainId}:${transactionHash.toLowerCase()}`
  * If a log index is present, it is appended: `${chainId}:${transactionHash.toLowerCase()}:${logIndex}`
- * Per PRD ?7: "preserve log index in evidence IDs while counting unique transactions separately".
+ * Per PRD §7: "preserve log index in evidence IDs while counting unique transactions separately".
  */
 export function buildEvidenceId(chainId: number, txHash: string, logIndex?: number | null): string {
   const normalizedHash = txHash.toLowerCase();
