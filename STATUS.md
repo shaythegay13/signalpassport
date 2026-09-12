@@ -48,8 +48,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | --- | --- | --- | --- | --- |
 | **M0** | First-hour feasibility gate: confirm reuse inventory, establish repo, retrieve one real bounded wallet dataset, freeze the source. | Repo initialized with an initial commit recording pre-implementation state; `docs/REUSE.md` confirmed or corrected against the real files; one provider and chain chosen with the endpoint's *actual* history and pagination capability demonstrated; real response saved as a fixture with full retrieval metadata; source frozen in `STATUS.md`. | The exact request issued; the raw saved response; the metadata record; transaction hashes, timestamps and direction fields identified in the real payload; pagination behaviour observed, not assumed. | **Accepted** |
 | **M1** | Evidence foundation: address validation, adapter to normalized evidence, three deterministic metrics, dedup, UTC bucketing, coverage status. | Metrics match hand-checked expected values on a small fixture; duplicate `(chainId, txHash)` records do not inflate counts; UTC calendar-date boundaries correct at both edges; a provider error surfaces as an error and never as zero activity; coverage is one of `complete_for_query` / `partial` / `unknown` with truncation and pagination recorded. | Passing test run output; the hand-checked expected values and how they were derived; a test proving error is not zero. | **Accepted** |
-| **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Complete** (Ready for Review) |
-| **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | Not started |
+| **M2** | Passport bundle and integrity: shared schema, canonical serialization, SHA-256 payload digest. | Bundle carries `schema_version`, `payload`, `integrity`; canonical JSON sorts object keys recursively, defines stable array ordering, encodes large chain integers as decimal strings, and rejects non-finite or ambiguous numbers; the digest covers `payload` only and excludes its own digest and transport fields; identical payload gives identical bytes and digest **in a separate process**; payload-only tampering fails the check. | Test output including the cross-process digest match, the tamper-mismatch case, and rejection of non-finite values. | **Accepted** |
+| **M3** | Both interfaces: App One (input, analysis, Passport, evidence drill-down, export) and App Two (independent import, validation, display). | App Two is a separate runnable application, not a second route; it imports and displays a bundle **while App One is stopped**, with no provider key, no network fetch and no AI; every claim's evidence IDs resolve within the bundle; unsupported schema versions and malformed or missing evidence references are rejected with usable messages; integrity and publication status are shown separately; integrity is labelled "Bundle integrity matched" with its explanation, never "verified reputation." | Screenshots or a terminal transcript of App Two running with App One stopped; the exported bundle file; a reload-after-download check showing no field loss and an unchanged digest. | Completed — awaiting review |
 | **M4** | Reliability and edge states. | Zero qualifying activity yields a valid empty Passport stating the exact query scope; invalid address, unavailable provider and partial coverage each have distinct states; partial coverage is visible in App One, App Two and the export; README setup works from a clean clone with documented sample data. | Each state exercised and shown; a clean-clone README walkthrough. | Not started |
 | **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | Blocked by gate |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | Not started |
@@ -139,22 +139,41 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     schema work so the fix doesn't have to unwind a hardened bundle schema later.
   - Full reproduction steps: `docs/verification/M1.md`.
 
+- **M2 — accepted.** Reviewer read `canonical.ts` and `digest.ts` in full and independently
+  recomputed the persisted bundle's digest outside the implementer's own test suite before
+  accepting:
+  - **Reran `npm test` directly**: 39/39 pass, real output captured.
+  - **Independent digest recomputation**: wrote a standalone script (not part of the project's
+    test suite) importing `computePayloadDigest`/`canonicalJsonStringify` from the actual
+    library code, ran it against `fixtures/real/passport-bundle.json` — stored digest
+    `14d8261b...` matched a fresh recomputation exactly; mutating a claim value changed the
+    digest; re-canonicalizing the same payload from two independent `JSON.parse`/`stringify`
+    round-trips produced byte-identical output.
+  - **Canonical serialization read line-by-line**: recursive key sort, array-order preservation
+    (with the object-keys-sorted / array-elements-not-reordered distinction correctly
+    implemented and commented), `NaN`/`Infinity`/`-0` rejection, `Number.isSafeInteger` bound
+    checking on integer-valued numbers (the exact risk PRD §8 names — silent precision loss on
+    large chain integers), circular-reference detection via `WeakSet`. All correct.
+  - **`digest.ts` read in full**: hashes `payload` only; `verifyBundleIntegrity`'s docstring
+    states PRD §8's exact security caveat — a matching digest detects accidental tampering, not
+    authenticity — and a real test (`tamper-and-rehash passes structural check`) proves the
+    suite doesn't quietly contradict its own documentation.
+  - **Empty-claims fix confirmed minimal and correct**: `bundle.ts`'s `payload.claims` is
+    `z.array(claimSchema)` with no array-level `.min(1)`; `claimSchema.evidenceIds` itself is
+    untouched. Resolves the gap flagged after M1 without altering M1's accepted schema.
+  - **Repo-wide scan for both corruption modes** (BOM/control-bytes, and the `?`-substitution
+    found after M1) rerun independently: clean everywhere, including the M1 docs Task 0 was
+    responsible for restoring.
+  - `ledgerlens/` still unmodified; git history clean.
+  - Full reproduction steps: `docs/verification/M2.md`.
+
 ## In Progress
 
-- **M2** — Passport bundle and integrity deliverables ready for reviewer evaluation:
-  - **Task 0:** Fixed remaining write-path corruption in docs, restored Unicode symbols (`§`, `—`), verified round-trip, committed as `8bac687`.
-  - **Canonical serialization (`packages/verification/src/canonical.ts`):** Deterministic recursive key sorting, array element order preservation, decimal strings for large integers / BigInt, safe integer enforcement, and outright rejection (`TypeError`) for `NaN`, `Infinity`, `-Infinity`, and `-0`. Compact zero-whitespace representation.
-  - **Bundle envelope schema (`packages/schema/src/bundle.ts`):** Runtime-validated Zod schemas for `PassportBundle`, `PassportPayload`, `IntegrityRecord`, and optional `PublicationRecord`. Proved that `payload.claims: z.array(claimSchema)` structurally allows `[]` for zero-activity queries (PRD §9) without altering M1's `claimSchema`.
-  - **Payload digest & verification (`packages/verification/src/digest.ts`):** SHA-256 digest covering `payload` only (excluding `integrity`, `schema_version`, and `publication`). Functions `computePayloadDigest`, `verifyBundleIntegrity`, `createPassportBundle`.
-  - **Cross-process determinism proven:** Child process spawned via `node:child_process.spawnSync` running `tests/helpers/cross-process-worker.ts` independently verifies byte-identical canonical JSON and digest against parent process.
-  - **Security semantics tested:** Tamper detection caught; tamper-and-rehash verified to pass local digest check with explicit documentation explaining digest checks detect accidental corruption, not authenticity (PRD §8).
-  - **Real fixture bundle generated (`fixtures/real/passport-bundle.json`):** Generated from real fixture data (100 raw rows, 28 qualifying txs), saved to disk (26,912 bytes, digest `14d8261b4b0494fd6f136160692ac3bb55c60c6c7dd2705f61feb12fb5aa5506`), reload fidelity verified with zero field loss.
-  - **Test suite:** 39 tests across 9 suites all passing (`npm test`).
-  - **Documentation:** Created `docs/verification/M2.md`.
+- **M3** — implementation complete; cross-app proof verified; awaiting technical lead review. Evidence recorded in `docs/verification/M3.md`.
 
 ## Not Started
 
-- M3 through M6. P0b and P1 remain gated.
+- M4 through M6. P0b and P1 remain gated.
 
 ## Known Issues
 
