@@ -12,15 +12,27 @@ LedgerLens source, not against the PRD's candidate list or the pitch deck.
 Verified by direct inspection on 2026-09-12, before any Signal Passport implementation.
 LedgerLens `master` @ `bd9b41c`, clean working tree.
 
-Total application source: **543 lines** across `lib/` (9 files, 403 L), `tests/` (5 files,
-162 L — counted separately), `app/` (5 files, 60 L), `components/` (1 file, 38 L).
+Total application source: **441 lines** (excluding tests) across `lib/` (9 files, 343 L),
+`app/` (4 ts/tsx files, 60 L — 61 L with `globals.css`), `components/` (1 file, 38 L).
+(Note: the initial draft recorded 403 L for `lib/` and 543 L total; direct file-by-file count
+reveals `lib/` is 343 lines, with the previous 403 resulting from double-counting `app/`'s 60 lines).
+`tests/` contains 5 files, 162 L. `scripts/` contains 1 file, 18 L (`scripts/verify-uploadable-demo.ts`).
+Total codebase source including tests and scripts is 621 lines.
 Stack: Next.js 15.5.2, React 19.1.1, zod 4, `ai` 7 + `@ai-sdk/anthropic` + `@ai-sdk/groq`,
 TypeScript 5.9, tests via `node:test` run by `tsx --test`.
 
 ### Subsystems the PRD requires that DO NOT exist in LedgerLens
 
-A repo-wide search for `wallet|ethereum|chain|sha-?256|createHash|canonical|passport|envio|alchemy|etherscan|viem|ethers`
-across all `.ts`/`.tsx` returned **zero matches**. The following are therefore 100% new work:
+Verified by direct repository searches:
+1. `git -C "../ledgerlens" grep -inE "wallet|ethereum|chain|sha-?256|createHash|canonical|passport|envio|alchemy|etherscan|viem|ethers|indexer|rpc" -- "*.ts" "*.tsx"`
+   -> **Zero matches** (exit code 1). (Repo-wide across docs returned only mentions of LangChain in `AGENTS.md` and "The canonical demo" in `README.md`).
+2. `git -C "../ledgerlens" grep -inE "bundle|digest|crypto" -- "*.ts" "*.tsx"`
+   -> Only `crypto.randomUUID()` in `app/api/interpret/route.ts` and `components/LedgerLens.tsx` for ephemeral session IDs.
+3. Evidence-ID inspection in `lib/ai-analysis.ts`: IDs are created as ad-hoc template literals (`` `change-${index + 1}` ``, `` `transaction-${transaction.transactionId}` ``) with no standalone module or namespace utility.
+
+**Claim CONFIRMED:** LedgerLens contains no wallet, chain, RPC, indexer, SHA-256, hashing, canonical-JSON, shared-schema, or bundle export/import code, and has no reusable evidence-ID utility.
+
+The following are therefore 100% new work:
 
 - Wallet-address validation, chain selection, any RPC/indexer/provider adapter.
 - Normalized onchain evidence records; stable chain-scoped evidence identifiers.
@@ -48,6 +60,7 @@ across all `.ts`/`.tsx` returned **zero matches**. The following are therefore 1
 | `tests/ai-provider.test.ts` `withEnv` helper (6 L) | Save/restore `process.env` around a test body. | **Copy.** |
 | Testing convention | `node:test` + `node:assert/strict`; fixture-reconciliation tests that assert hand-checked expected totals (`tests/demo-data.test.ts`). | **Reuse convention.** Matches PRD §14's "metrics match manually checked expected values." |
 | `docs/STATUS.md` convention | Sections `Working` / `In Progress` / `Not Started` / `Known Issues`, each claim carrying its verification evidence inline. | **Reuse convention.** Adopted by `../STATUS.md`. |
+| `scripts/verify-uploadable-demo.ts` (18 L) | Offline smoke-test runner invoking provider + prompt + validation offline via `--env-file=.env.local` without launching the UI. | **Reuse pattern.** Useful template for non-interactive smoke testing of pipelines and providers. |
 | Stack selection | Next.js + React + TypeScript + zod + `node:test`. | **Reuse the choice**, install at currently supported versions per PRD §11 rather than copying version numbers. |
 
 ### Explicitly NOT ported (PRD §5 prohibitions, confirmed present in LedgerLens)
