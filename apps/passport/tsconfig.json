@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@signal-passport/schema": ["../../packages/schema/src/index.ts"],
+      "@signal-passport/schema/*": ["../../packages/schema/src/*"],
+      "@signal-passport/analysis": ["../../packages/analysis/src/index.ts"],
+      "@signal-passport/analysis/*": ["../../packages/analysis/src/*"],
+      "@signal-passport/verification": ["../../packages/verification/src/index.ts"],
+      "@signal-passport/verification/*": ["../../packages/verification/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
