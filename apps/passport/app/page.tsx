@@ -264,8 +264,18 @@ export default function PassportApp() {
             href="https://signal-passport-verifier-saved-by-the-plates-projects.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="badge"
-            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+            style={{
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              background: "#e5342b",
+              color: "#ffffff",
+              fontWeight: 700,
+              padding: "6px 12px",
+              borderRadius: "0.5rem",
+              fontSize: "0.85rem"
+            }}
           >
             Open Offline Verifier
             <span className="material-symbols-outlined" style={{ fontSize: "0.9rem" }}>open_in_new</span>
