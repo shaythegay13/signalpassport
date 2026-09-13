@@ -1,4 +1,5 @@
 export * from "./types.js";
+export * from "./context-stats.js";
 export * from "./input.js";
 export * from "./prompt.js";
 export * from "./validation.js";

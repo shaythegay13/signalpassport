@@ -1,10 +1,12 @@
 import type { PassportPayload } from "@signal-passport/schema";
 import { METRIC_LABELS } from "../metrics.js";
 import type { ModelInput } from "./types.js";
+import { computeContextStats } from "./context-stats.js";
 
 /**
- * Creates minimal, explicit, immutable model input from a sealed PassportPayload per PRD §10.
- * Passes ONLY the computed claims, scope, and evidence summaries required to reference by ID.
+ * Creates minimal, explicit, immutable model input from a sealed PassportPayload per PRD §10 and M10.
+ * Passes ONLY the computed claims, scope, evidence summaries required to reference by ID,
+ * and deterministic context stats (recency and recipient concentration).
  * Excludes raw provider responses and internal implementation details.
  */
 export function createModelInput(payload: PassportPayload): ModelInput {
@@ -23,12 +25,16 @@ export function createModelInput(payload: PassportPayload): ModelInput {
     recipient: e.recipient
   }));
 
+  // Compute deterministic recency and concentration stats once via shared function
+  const contextStats = computeContextStats(payload);
+
   return {
     subjectAddress: payload.subjectAddress,
     chainId: payload.sourceChainId,
     observationWindow: payload.observationWindow,
     coverageStatus: payload.coverage.coverageStatus,
     claims,
-    evidence
+    evidence,
+    contextStats
   };
 }

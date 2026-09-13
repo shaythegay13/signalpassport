@@ -1,3 +1,5 @@
+import type { ContextStats } from "./context-stats.js";
+
 export type ModelInput = {
   subjectAddress: string;
   chainId: number;
@@ -18,6 +20,7 @@ export type ModelInput = {
     timestamp: string;
     recipient: string | null;
   }>;
+  contextStats: ContextStats;
 };
 
 export type ProviderId = "groq" | "anthropic";

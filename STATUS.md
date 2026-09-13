@@ -55,6 +55,7 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Accepted** |
 | **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Accepted** |
 | **M9** | Visual reskin. Owner had Google Stitch generate visual concepts; the color/type/layout system is good but Stitch invented a fictional technical architecture (Ed25519 signatures, Merkle trees, RPC archive nodes, block-range windows, fake telemetry) alongside it. | Style-only adoption of the Stitch design tokens and structural layout (hero section, document card headers, 8/4 grid layout, verdict card treatment); zero fabricated technical terms anywhere in the diff (checked by grep); all M7/M8 content and wording unchanged; both apps visually consistent; no change to logic/schema/digest/API contracts. | Grep commands and empty output for the banned-term list; full test suite unchanged; cross-app proof rerun live; diff stat proving real structural change (>150 lines/app). | **Accepted (round 2 structure), round 3 in progress (evidence UX)** |
+| **M10** | AI narrative enrichment. Owner reviewed App Two's AI explanation and found it added nothing beyond restating the three metrics as a sentence; asked for genuinely new, relevant information for the integrating app, without crossing into a verdict. | Two new deterministic facts (recency, recipient concentration) computed by one shared function used identically by the model-input builder, validator, and fallback; neutral non-evaluative language enforced by a new validator check distinct from the existing causal-word ban; all M5 tests unchanged; a real live model call shows the richer narrative. | Shared function reviewed directly in code; hand-checked stat values against the real fixture; real live model request/response; full unfiltered test output. | In progress |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -480,9 +481,31 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
   - `.metric-card` CSS updated in both apps to `cursor: default` with hover/selection pseudo-classes removed.
   - Verification: 63/63 tests pass, both Next.js builds exit 0, 0 BOMs, `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
 
+- **M10 — complete (ready for review).** AI narrative enrichment with deterministic recency and concentration facts per `docs/prompts/M10-ai-narrative-enrichment.md`:
+  - **Task 0: Anthropic Model Update (`claude-sonnet-5`)**: Updated `modelId` in `packages/analysis/src/ai/provider.ts` to `claude-sonnet-5`. Verified with live Anthropic API call returning `{ message: 'Hello from claude-sonnet-5' }` with model `claude-sonnet-5`. Left Groq model (`openai/gpt-oss-120b`) untouched.
+  - **Task 1: Single Shared Context Stats Function**: Implemented `computeContextStats(payload: PassportPayload): ContextStats` in `packages/analysis/src/ai/context-stats.ts`:
+    - *Recency*: `daysSinceLastActivity = Math.max(0, Math.round((generationTimestamp - latestEvidenceTimestamp) / (1000*60*60*24)))`. Omitted (`undefined`) if evidence is empty.
+    - *Recipient concentration*: Aggregated non-null recipient counts across qualifying transactions. If `<= 1` unique recipient or `maxCount <= 1`, concentration is `null`. Otherwise returns `{ maxRecipientTxCount, totalQualifyingTxCount, recipientAddress }`.
+  - **Task 2: Model Input & Prompt Enriched**:
+    - Wired `computeContextStats` into `packages/analysis/src/ai/input.ts` to populate `contextStats` on `ModelInput`.
+    - Updated system and user prompts in `packages/analysis/src/ai/prompt.ts` with Rule 2 (inferential word prohibitions) and Rule 7 (describing recency and concentration neutrally with exact numbers).
+  - **Task 3: Dynamic Validator with Evaluative Language Prohibition**:
+    - `packages/analysis/src/ai/validation.ts` calls `computeContextStats(payload)` to extract allowed numbers (`daysSinceLastActivity`, `maxRecipientTxCount`, `totalQualifyingTxCount`) dynamically into `allowedNumbers`.
+    - Added distinct validation check `(g)` rejecting evaluative/inferential words (`suggests`, `indicates`, `implies`, `means that`, `likely`, `probably`).
+  - **Task 4: Enriched Deterministic Fallback**:
+    - `packages/analysis/src/ai/fallback.ts` calls `computeContextStats(payload)` and appends neutral recency (`"The most recent qualifying transaction occurred X days before bundle generation."`) and concentration (`"A single recipient received X of Y transactions with a specified recipient."`) clauses.
+  - **Task 5: Comprehensive Automated Tests**:
+    - Authored `tests/m10-context-stats.test.ts` covering: (1) hand-checked correctness against real fixture (`0` days, `11` of `28` to `0x0439e60F02a8900a951603950d8D4527f400C3f1`); (2) divergence-proofing test between input and validator; (3) evaluative-language rejection test; (4) zero-concentration edge case (all unique recipients); (5) zero-evidence edge case (zero activity).
+    - Full test suite passes: 68/68 tests passing (`npm test`).
+  - **Task 6: Live Groq Verification**:
+    - Ran live Groq call (`openai/gpt-oss-120b`) against `fixtures/real/passport-bundle.json`: returned valid explanation (`isFallback: false`) seamlessly incorporating recency (`"The most recent transaction occurred 0 days ago."`) and concentration (`"One recipient address received 11 of the 28 transactions."`).
+  - **Verification & Hygiene**:
+    - Both Next.js builds succeed (`npm run build:passport`, `npm run build:consumer`).
+    - 0 BOMs across all files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
+
 ## In Progress
 
-- Waiting for technical lead review on M9 round 3.
+None (M10 ready for review).
 
 ## Known Issues
 

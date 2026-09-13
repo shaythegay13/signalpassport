@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { PassportPayload, AiExplanation } from "@signal-passport/schema";
 import { aiExplanationSchema } from "@signal-passport/schema";
 import type { ModelInput } from "./types.js";
+import { computeContextStats } from "./context-stats.js";
 
 const rawAiOutputSchema = z.object({
   summary: z.string().min(1).max(1000),
@@ -12,10 +13,11 @@ const rawAiOutputSchema = z.object({
  * Validates model output against PRD §10 rules in strict order:
  * (a) Schema conformance
  * (b) Evidence ID membership (reject dangling references)
- * (c) No invented numbers (all numbers must match claim values or declared chain ID/window)
- * (d) No coverage status upgrade (cannot claim complete if partial)
+ * (c) No invented numbers (all numbers must match claim values, context stats, or declared chain ID/window)
+ * (d) No coverage status upgrade (cannot claim complete if partial or unknown)
  * (e) No wallet identity / ownership claims
  * (f) No causal speculation phrases
+ * (g) No evaluative or inferential language (suggests, indicates, implies, likely, probably)
  */
 export function validateAiExplanation(
   raw: unknown,
@@ -46,13 +48,23 @@ export function validateAiExplanation(
   }
 
   // (c) No invented numbers
-  // Allowed numbers: claim values, chain ID, evidence counts, and observation window dates/tokens
+  // Allowed numbers: claim values, chain ID, evidence counts, context stats, and observation window dates/tokens
   const allowedNumbers = new Set<string>();
   allowedNumbers.add(String(payload.sourceChainId)); // e.g. 1
   for (const claim of payload.claims) {
     allowedNumbers.add(String(claim.value));
   }
   allowedNumbers.add(String(payload.evidence.length));
+
+  // Compute context stats via shared pure function (M10)
+  const stats = computeContextStats(payload);
+  if (stats.daysSinceLastActivity !== undefined) {
+    allowedNumbers.add(String(stats.daysSinceLastActivity));
+  }
+  if (stats.recipientConcentration) {
+    allowedNumbers.add(String(stats.recipientConcentration.maxRecipientTxCount));
+    allowedNumbers.add(String(stats.recipientConcentration.totalQualifyingTxCount));
+  }
 
   // Extract observation window dates and components
   const startDate = new Date(payload.observationWindow.startUtc);
@@ -142,6 +154,17 @@ export function validateAiExplanation(
     return {
       valid: false,
       error: `The explanation asserts unsupported causal claims ("${causalMatch[0]}"). Write descriptively, not causally.`
+    };
+  }
+
+  // (g) No evaluative or inferential language (PRD §10 / M10)
+  const evaluativeMatch = summary.match(
+    /\b(suggests?|suggesting|indicates?|indicating|implies?|implying|means that|likely|probably)\b/i
+  );
+  if (evaluativeMatch) {
+    return {
+      valid: false,
+      error: `The explanation asserts evaluative or inferential claims ("${evaluativeMatch[0]}"). State observed facts only, without inferring intent, likelihood, or significance.`
     };
   }
 
