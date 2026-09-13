@@ -55,7 +55,8 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Accepted** |
 | **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Accepted** |
 | **M9** | Visual reskin. Owner had Google Stitch generate visual concepts; the color/type/layout system is good but Stitch invented a fictional technical architecture (Ed25519 signatures, Merkle trees, RPC archive nodes, block-range windows, fake telemetry) alongside it. | Style-only adoption of the Stitch design tokens and structural layout (hero section, document card headers, 8/4 grid layout, verdict card treatment); zero fabricated technical terms anywhere in the diff (checked by grep); all M7/M8 content and wording unchanged; both apps visually consistent; no change to logic/schema/digest/API contracts. | Grep commands and empty output for the banned-term list; full test suite unchanged; cross-app proof rerun live; diff stat proving real structural change (>150 lines/app). | **Accepted (round 2 structure), round 3 in progress (evidence UX)** |
-| **M10** | AI narrative enrichment. Owner reviewed App Two's AI explanation and found it added nothing beyond restating the three metrics as a sentence; asked for genuinely new, relevant information for the integrating app, without crossing into a verdict. | Two new deterministic facts (recency, recipient concentration) computed by one shared function used identically by the model-input builder, validator, and fallback; neutral non-evaluative language enforced by a new validator check distinct from the existing causal-word ban; all M5 tests unchanged; a real live model call shows the richer narrative. | Shared function reviewed directly in code; hand-checked stat values against the real fixture; real live model request/response; full unfiltered test output. | In progress |
+| **M10** | AI narrative enrichment. Owner reviewed App Two's AI explanation and found it added nothing beyond restating the three metrics as a sentence; asked for genuinely new, relevant information for the integrating app, without crossing into a verdict. | Two new deterministic facts (recency, recipient concentration) computed by one shared function used identically by the model-input builder, validator, and fallback; neutral non-evaluative language enforced by a new validator check distinct from the existing causal-word ban; all M5 tests unchanged; a real live model call shows the richer narrative. | Shared function reviewed directly in code; hand-checked stat values against the real fixture; real live model request/response; full unfiltered test output. | **Accepted** |
+| **M11** | Demo visual polish pass. Owner supplied a second batch of Google Stitch mockups (again mixing real layout ideas with fabricated architecture: signatures, Merkle trees, EIP-712/ERC-4361, fake RPC telemetry, invented metric sub-breakdowns) plus a reference `.txt` export, and asked for a scoped structural/hierarchy pass on both apps ahead of the hackathon demo — not a re-theme, since both apps' color/type/radius tokens already match the requested near-black/charcoal/off-white/mint system. | At 1440×900/100% zoom: result heading, key metrics, and primary action visible without scrolling on both result screens; no horizontal overflow/clipped text/misaligned controls; consistent typography/colors/spacing/buttons across both apps; long addresses/hashes wrap or truncate; analyze/evidence/export/import/invalid-file flows still work; loading/empty/success/error states usable; zero fabricated technical claims or sub-metrics introduced. | Prompt: `docs/prompts/M11-demo-visual-polish.md`. Screenshots of both apps' idle/in-progress/result states at 1440×900; full test suite unchanged; diff scoped to `apps/passport/app/{page.tsx,globals.css}` and `apps/consumer/app/{page.tsx,globals.css}` only. | **Accepted** |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -503,9 +504,56 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     - Both Next.js builds succeed (`npm run build:passport`, `npm run build:consumer`).
     - 0 BOMs across all files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
 
+- **M10 — accepted.** Reviewer independently verified every layer before accepting:
+  - **Reran `npm test` directly**: 68/68 pass (5 new tests, none of M5's existing tests
+    changed). Confirmed zero diff in `packages/schema`, both apps' API routes, and both
+    `page.tsx` files — this milestone genuinely touched only `packages/analysis/src/ai/*`.
+  - **Model IDs verified live through the real pipeline**, not just read from the file: Groq
+    confirmed untouched; Anthropic's `claude-sonnet-5` produced two genuine non-fallback
+    responses via `generateExplanation()` itself (one fell back on a separate attempt due to
+    ordinary model variance — the 2-attempt repair/fallback safety net working as designed,
+    not a bug; confirmed by retrying and getting a clean pass).
+  - **Independently recomputed both new context stats from scratch**, without using
+    `computeContextStats` at all, against the real fixture: `daysSinceLastActivity = 0`,
+    `11 of 28` transactions to `0x0439e60F02a8900a951603950d8D4527f400C3f1` — matches the
+    function's own output and the report's hand-check exactly.
+  - **Confirmed via grep that `input.ts`, `validation.ts`, and `fallback.ts` all import the
+    same `computeContextStats`** — no duplicated/divergent logic anywhere, which is exactly
+    the class of bug that caused the M5 date-splitting issue.
+  - **Read the test file directly**: the divergence-proofing test asserts
+    `input.contextStats` equals `computeContextStats(payload)` directly; a genuine
+    fabrication case (claiming "15 of 28" against a real value of 11) is correctly rejected;
+    four distinct evaluative-language cases (suggests/likely/indicates/implies) all correctly
+    rejected, separate from the existing causal-word check.
+  - **Made my own live call through the full pipeline on Groq**, independent of the report's
+    transcript: got a genuine, non-fallback, correctly-enriched response — *"The most recent
+    transaction occurred 0 days ago. One recipient received 11 of the 28 transactions."*
+  - `ledgerlens/` unmodified.
+
+- **M11 — accepted.** Reviewer independently verified every layer:
+  - **Above-the-fold visibility (1440×900, 100% zoom)**:
+    - **Generator result screen**: Heading Top: `321.5px`, Export button Bottom: `427.5px`, 3 Metric Cards Bottom: `832.3px` (Window height: `900px`, `allVisibleWithoutScrolling: true`). Heading, all 3 metric cards, and Export button are 100% visible without scrolling.
+    - **Verifier result screen**: Summary Bar Top: `154.0px`, Dual Status Cards Bottom: `550.4px`, 3 Metric Cards Bottom: `849.8px` (Window height: `900px`, `allVisibleWithoutScrolling: true`). Heading, verification status cards, and 3 metric cards are 100% visible without scrolling.
+  - **Responsive horizontal overflow check (768px width)**:
+    - **Generator**: `clientWidth: 753px, scrollWidth: 753px` (`hasHorizontalOverflow: false`).
+    - **Verifier**: `clientWidth: 753px, scrollWidth: 753px` (`hasHorizontalOverflow: false`).
+  - **All 6 screenshots captured** to `docs/screenshots/`:
+    - `generator-idle.png` (117,683 bytes)
+    - `generator-in-progress.png` (126,790 bytes)
+    - `generator-result.png` (189,535 bytes)
+    - `verifier-idle.png` (114,002 bytes)
+    - `verifier-result-valid.png` (200,805 bytes)
+    - `verifier-result-invalid.png` (87,828 bytes)
+  - **Strict Scope Guardrails**:
+    - Zero changes to `packages/analysis`, `packages/schema`, `packages/verification`, or any `api/` route logic.
+    - Zero new npm runtime dependencies.
+    - Zero fabricated claims (no Ed25519, Merkle, RPC telemetry, fake sub-metrics).
+    - `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
+    - Full test suite passes 100% (68/68 tests passing).
+
 ## In Progress
 
-None (M10 ready for review).
+None.
 
 ## Known Issues
 

@@ -49,9 +49,9 @@ export default function PassportApp() {
     setAddressError(null);
   }
 
-  async function handleAnalyze(e: React.FormEvent) {
-    e.preventDefault();
-    const cleanAddress = addressInput.trim();
+  async function handleAnalyze(e?: React.FormEvent, overrideAddress?: string) {
+    if (e) e.preventDefault();
+    const cleanAddress = (overrideAddress ?? addressInput).trim();
     const validation = validateEthereumAddress(cleanAddress);
     if (!validation.isValid) {
       setAddressError(validation.error || "Invalid Ethereum address");
@@ -153,6 +153,14 @@ export default function PassportApp() {
     }
   }
 
+  React.useEffect(() => {
+    (window as any).__runAnalyze = (addr?: string) => {
+      const targetAddr = addr || EXAMPLE_SUBJECT;
+      handleAddressChange(targetAddr);
+      return handleAnalyze(undefined, targetAddr);
+    };
+  });
+
   async function handleGenerateExplanation() {
     if (!bundle) return;
     setIsExplaining(true);
@@ -252,97 +260,124 @@ export default function PassportApp() {
       </header>
 
       {/* Move 1: Distinct Hero Section for Opening Statement */}
-      <section className="hero-section">
-        <div className="hero-kicker">
-          <span className="badge badge-neutral">Fintech Interoperability Layer</span>
-        </div>
-        <h2 className="hero-title">Portable, tamper-evident onchain credentials for fintech</h2>
-        <p className="hero-description">
-          Every fintech app that wants to understand a wallet's activity currently has to build its own pipeline to fetch and interpret blockchain history — over and over, for every app. Signal Passport does that work once: enter a wallet, get a portable record of its verified activity, and any other application can check that record for itself, without re-scanning the blockchain or taking your word for it.
-        </p>
-      </section>
-
-      {/* Input Card (Move 2: Document Header Pattern) */}
-      <section className="card">
-        <div className="card-header-bar">
-          <div className="card-header-left">
-            <span className="card-header-icon">⚙️</span>
-            <span className="card-header-tag">PARAMETERS // WALLET QUERY</span>
+      {!bundle && (
+        <section className="hero-section">
+          <div className="hero-kicker">
+            <span className="badge badge-neutral">Fintech Interoperability Layer</span>
           </div>
-          <span className="badge badge-neutral">Public Explorer Ingestion</span>
-        </div>
+          <h2 className="hero-title">Portable, tamper-evident onchain credentials for fintech</h2>
+          <p className="hero-description">
+            Every fintech app that wants to understand a wallet's activity currently has to build its own pipeline to fetch and interpret blockchain history — over and over, for every app. Signal Passport does that work once: enter a wallet, get a portable record of its verified activity, and any other application can check that record for itself, without re-scanning the blockchain or taking your word for it.
+          </p>
+        </section>
+      )}
 
-        <h3 className="card-title">Create a Wallet Passport</h3>
-        <p className="card-desc">
-          Enter any public Ethereum address to ingest onchain transaction history over the 30-day UTC observation window.
-        </p>
-
-        <form onSubmit={handleAnalyze}>
-          <div className="input-row">
-            <input
-              type="text"
-              className="text-input"
-              placeholder="0x... Ethereum wallet address"
-              value={addressInput}
-              onChange={(e) => handleAddressChange(e.target.value)}
-              disabled={currentStage !== "idle" && currentStage !== "complete" && currentStage !== "error"}
-            />
-            <button
-              type="submit"
-              className="primary-btn"
-              disabled={
-                !addressInput.trim() ||
-                !!addressError ||
-                (currentStage !== "idle" && currentStage !== "complete" && currentStage !== "error")
-              }
-            >
-              Analyze Wallet
-            </button>
+      {/* Input Section: Full Form when idle/in-progress, Collapsed Bar when bundle present (M11) */}
+      {!bundle ? (
+        <section className="card">
+          <div className="card-header-bar">
+            <div className="card-header-left">
+              <span className="card-header-icon">⚙️</span>
+              <span className="card-header-tag">PARAMETERS // WALLET QUERY</span>
+            </div>
+            <span className="badge badge-neutral">Public Explorer Ingestion</span>
           </div>
 
-          {addressError && (
-            <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", color: "var(--danger)", padding: "10px 14px", borderRadius: "6px", marginTop: "10px", fontSize: "0.85rem" }}>
-              <strong>Invalid Address Format:</strong> {addressError}. No network request was dispatched.
+          <h3 className="card-title">Create a Wallet Passport</h3>
+          <p className="card-desc">
+            Enter any public Ethereum address to ingest onchain transaction history over the 30-day UTC observation window.
+          </p>
+
+          <form onSubmit={handleAnalyze}>
+            <div className="input-row">
+              <input
+                type="text"
+                className="text-input"
+                placeholder="0x... Ethereum wallet address"
+                value={addressInput}
+                onChange={(e) => handleAddressChange(e.target.value)}
+                disabled={currentStage !== "idle" && currentStage !== "complete" && currentStage !== "error"}
+              />
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={
+                  !addressInput.trim() ||
+                  !!addressError ||
+                  (currentStage !== "idle" && currentStage !== "complete" && currentStage !== "error")
+                }
+              >
+                Analyze Wallet
+              </button>
+            </div>
+
+            {addressError && (
+              <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", color: "var(--danger)", padding: "10px 14px", borderRadius: "6px", marginTop: "10px", fontSize: "0.85rem" }}>
+                <strong>Invalid Address Format:</strong> {addressError}. No network request was dispatched.
+              </div>
+            )}
+
+            <div className="example-box">
+              Try example wallet:
+              <button type="button" onClick={useExample}>
+                {EXAMPLE_SUBJECT}
+              </button>
+              <span style={{ marginLeft: "6px" }}>(Active Ethereum EOA with 28 qualifying transactions)</span>
+            </div>
+          </form>
+
+          {/* Live Pipeline Progress (Active State) */}
+          {currentStage !== "idle" && currentStage !== "complete" && steps.length > 0 && (
+            <div className="progress-list">
+              {steps.map((s, idx) => (
+                <div key={idx} className="progress-step">
+                  <span className="step-indicator">
+                    {s.stage === "error" ? "❌" : s.stage === "complete" ? "✔" : "⏳"}
+                  </span>
+                  <div className="step-content">
+                    <div className="step-title">
+                      {s.message}
+                    </div>
+                    {s.detail && <div className="step-desc">{s.detail}</div>}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          <div className="example-box">
-            Try example wallet:
-            <button type="button" onClick={useExample}>
-              {EXAMPLE_SUBJECT}
-            </button>
-            <span style={{ marginLeft: "6px" }}>(Active Ethereum EOA with 28 qualifying transactions)</span>
-          </div>
-        </form>
-
-        {/* Live Pipeline Progress (Active State) */}
-        {currentStage !== "idle" && currentStage !== "complete" && steps.length > 0 && (
-          <div className="progress-list">
-            {steps.map((s, idx) => (
-              <div key={idx} className="progress-step">
-                <span className="step-indicator">
-                  {s.stage === "error" ? "❌" : s.stage === "complete" ? "✔" : "⏳"}
-                </span>
-                <div className="step-content">
-                  <div className="step-title">
-                    {s.message}
-                  </div>
-                  {s.detail && <div className="step-desc">{s.detail}</div>}
-                </div>
+          {/* Provider Unavailable Error Card (PRD §14 Invariant) */}
+          {isProviderError && (
+            <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", borderRadius: "6px", padding: "16px", marginTop: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <strong style={{ color: "var(--danger)", fontSize: "1rem" }}>
+                  Upstream Provider Unavailable (Network Failure)
+                </strong>
+                <span className="badge badge-danger">Operational Error</span>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Compact Completed State Summary (Task 2 Polish) */}
-        {currentStage === "complete" && bundle && (
-          <div className="pipeline-compact-bar">
-            <div className="pipeline-compact-text">
-              <span>✔</span>
-              <span>
-                <strong>Analysis complete:</strong> Ingested transactions via public Blockscout REST v2 · <strong>{bundle.payload.claims.find(c => c.metricType === "observed_transaction_count")?.value ?? 0} qualifying transactions</strong> sealed into canonical payload
-              </span>
+              <p style={{ margin: "8px 0 0", color: "var(--text)", fontSize: "0.9rem" }}>
+                {errorMessage}
+              </p>
+              <div style={{ marginTop: "12px", padding: "10px 14px", background: "var(--surface)", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                <strong>Operational Invariant:</strong> Blockscout explorer downtime or network failures are operational errors. They are <em>never</em> reported as zero wallet activity and never produce an empty passport.
+              </div>
             </div>
+          )}
+
+          {/* General Error Banner */}
+          {errorMessage && !isProviderError && (
+            <div className="error-banner" style={{ marginTop: "16px" }}>Error: {errorMessage}</div>
+          )}
+        </section>
+      ) : (
+        /* Collapsed Input Bar when bundle present (M11) */
+        <div className="compact-summary-bar">
+          <div className="compact-summary-left">
+            <span className="compact-summary-icon">⚙️</span>
+            <span className="compact-summary-title">Subject Wallet:</span>
+            <span className="compact-summary-val font-mono">{bundle.payload.subjectAddress}</span>
+            <span className="badge badge-success">Sealed Artifact</span>
+          </div>
+          <div className="compact-summary-actions">
             <button
               type="button"
               className="pipeline-toggle-btn"
@@ -350,12 +385,34 @@ export default function PassportApp() {
             >
               {showPipelineDetails ? "Hide pipeline steps ▲" : "Inspect pipeline steps ▼"}
             </button>
+            <button
+              type="button"
+              className="secondary-btn compact-action-btn"
+              onClick={() => {
+                setBundle(null);
+                setSteps([]);
+                setCurrentStage("idle");
+                setExplanation(null);
+                setErrorMessage(null);
+              }}
+            >
+              Analyze another wallet ↻
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Expandable Pipeline Details */}
-        {showPipelineDetails && steps.length > 0 && (
-          <div className="progress-list" style={{ marginTop: "12px" }}>
+      {/* Expandable Pipeline Details when bundle is present (M11) */}
+      {bundle && showPipelineDetails && steps.length > 0 && (
+        <div className="card" style={{ marginBottom: "20px", padding: "16px" }}>
+          <div className="card-header-bar" style={{ marginBottom: "12px", paddingBottom: "8px" }}>
+            <div className="card-header-left">
+              <span className="card-header-icon">📋</span>
+              <span className="card-header-tag">INGESTION PIPELINE LOG</span>
+            </div>
+            <span className="badge badge-success">Completed</span>
+          </div>
+          <div className="progress-list" style={{ marginTop: 0 }}>
             {steps.map((s, idx) => (
               <div key={idx} className="progress-step">
                 <span className="step-indicator">
@@ -370,31 +427,8 @@ export default function PassportApp() {
               </div>
             ))}
           </div>
-        )}
-
-        {/* Provider Unavailable Error Card (PRD §14 Invariant) */}
-        {isProviderError && (
-          <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(248, 81, 73, 0.4)", borderRadius: "6px", padding: "16px", marginTop: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <strong style={{ color: "var(--danger)", fontSize: "1rem" }}>
-                Upstream Provider Unavailable (Network Failure)
-              </strong>
-              <span className="badge badge-danger">Operational Error</span>
-            </div>
-            <p style={{ margin: "8px 0 0", color: "var(--text)", fontSize: "0.9rem" }}>
-              {errorMessage}
-            </p>
-            <div style={{ marginTop: "12px", padding: "10px 14px", background: "var(--surface)", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              <strong>Operational Invariant:</strong> Blockscout explorer downtime or network failures are operational errors. They are <em>never</em> reported as zero wallet activity and never produce an empty passport.
-            </div>
-          </div>
-        )}
-
-        {/* General Error Banner */}
-        {errorMessage && !isProviderError && (
-          <div className="error-banner" style={{ marginTop: "16px" }}>Error: {errorMessage}</div>
-        )}
-      </section>
+        </div>
+      )}
 
       {/* Move 3: Grid-Based Result Layout (8-col main / 4-col sidebar) */}
       {bundle && (
@@ -416,35 +450,46 @@ export default function PassportApp() {
                 </div>
               </div>
 
-              <h2 style={{ margin: "4px 0 8px 0", fontSize: "1.4rem" }}>Verified Activity Metrics</h2>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", margin: "0 0 18px 0", lineHeight: 1.5 }}>
-                Deterministic calculations over the 30-day observation window ({bundle.payload.observationWindow.startUtc.slice(0, 10)} to {bundle.payload.observationWindow.endUtc.slice(0, 10)}).
-              </p>
+              <div className="results-header-row">
+                <div>
+                  <h2 className="results-main-title">Verified Activity Metrics</h2>
+                  <p className="results-subtitle">
+                    Deterministic calculations over the 30-day observation window ({bundle.payload.observationWindow.startUtc.slice(0, 10)} to {bundle.payload.observationWindow.endUtc.slice(0, 10)}).
+                  </p>
+                </div>
+                <div className="results-header-actions">
+                  <button
+                    type="button"
+                    className="primary-btn export-btn-top"
+                    onClick={handleExport}
+                  >
+                    <span>📥</span> Export Passport (.json)
+                  </button>
+                </div>
+              </div>
 
               {/* Partial Coverage Notice (PRD §14) */}
               {bundle.payload.coverage.coverageStatus === "partial" && (
-                <div className="warning-box" style={{ marginBottom: "18px" }}>
+                <div className="warning-box" style={{ marginBottom: "16px" }}>
                   <strong>Partial Coverage Notice:</strong> Explorer pagination limit reached ({bundle.payload.coverage.pageCount} pages retrieved) before window end. Metrics reflect only transactions in retrieved pages and may undercount total activity (coverage status: <code>partial</code>).
                 </div>
               )}
 
               {/* Zero Activity Notice (PRD §14) */}
               {bundle.payload.claims.length === 0 && (
-                <div style={{ background: "rgba(88, 166, 255, 0.1)", border: "1px solid rgba(88, 166, 255, 0.3)", color: "var(--border-active)", padding: "12px 16px", borderRadius: "6px", marginBottom: "18px", fontSize: "0.88rem" }}>
+                <div style={{ background: "rgba(88, 166, 255, 0.1)", border: "1px solid rgba(88, 166, 255, 0.3)", color: "var(--border-active)", padding: "12px 16px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.88rem" }}>
                   <strong>Zero Qualifying Activity:</strong> No successful outgoing transactions were observed for this wallet during the declared 30-day observation window. All metrics evaluate to 0.
                 </div>
               )}
 
-              {/* Move 4: Factual Record Notice (Real Card Treatment) */}
-              <div className="verdict-card" style={{ marginBottom: "20px" }}>
+              {/* Move 4: Factual Record Notice (Streamlined Inline Card Treatment - M11) */}
+              <div className="verdict-inline-note">
                 <span className="verdict-card-icon">⚖️</span>
-                <div className="verdict-card-body">
-                  <div className="verdict-card-title">
-                    A factual record, not a verdict
-                  </div>
-                  <div className="verdict-card-text">
+                <div className="verdict-inline-body">
+                  <strong className="verdict-inline-title">A factual record, not a verdict:</strong>{" "}
+                  <span className="verdict-inline-text">
                     This is not a credit score, a trust rating, or a risk assessment. It does not identify who owns this wallet or say whether it can be trusted — it shows only what actually happened, with the evidence to check it yourself.
-                  </div>
+                  </span>
                 </div>
               </div>
 
@@ -720,85 +765,87 @@ export default function PassportApp() {
               </div>
             </div>
 
-            {/* Technical Metadata & Provenance Panel */}
+            {/* Technical Metadata & Provenance Panel (Collapsible - M11) */}
             <div className="sidebar-card">
-              <div className="card-header-bar" style={{ paddingBottom: "10px", marginBottom: "14px" }}>
-                <div className="card-header-left">
-                  <span className="card-header-icon">🔐</span>
-                  <span className="card-header-tag">PROVENANCE // METADATA</span>
-                </div>
-                <span className="badge badge-neutral">RFC 8785 Canonical JSON</span>
-              </div>
+              <details open className="sidebar-meta-details">
+                <summary className="sidebar-meta-summary">
+                  <div className="card-header-left">
+                    <span className="card-header-icon">🔐</span>
+                    <span className="card-header-tag">PROVENANCE // METADATA</span>
+                  </div>
+                  <span className="sidebar-meta-hint">Toggle details ▼</span>
+                </summary>
 
-              <h4 className="sidebar-title">
-                Technical Details & Cryptographic Provenance
-              </h4>
+                <h4 className="sidebar-title" style={{ marginTop: "12px" }}>
+                  Technical Details & Cryptographic Provenance
+                </h4>
 
-              <div className="meta-panel">
-                <div className="meta-item">
-                  <span className="meta-key">Subject Address</span>
-                  <span className="meta-val">{bundle.payload.subjectAddress}</span>
-                  <span className="meta-caption">
-                    Valid checksummed EOA (analysis measures activity, not identity or custody)
-                  </span>
-                </div>
+                <div className="meta-panel">
+                  <div className="meta-item">
+                    <span className="meta-key">Subject Address</span>
+                    <span className="meta-val">{bundle.payload.subjectAddress}</span>
+                    <span className="meta-caption">
+                      Valid checksummed EOA (analysis measures activity, not identity or custody)
+                    </span>
+                  </div>
 
-                <div className="meta-item">
-                  <span className="meta-key">Source Network</span>
-                  <span className="meta-val">Chain ID {bundle.payload.sourceChainId} (Ethereum Mainnet via Blockscout REST v2)</span>
-                  <span className="meta-caption">
-                    Public API, zero private indexers
-                  </span>
-                </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Source Network</span>
+                    <span className="meta-val">Chain ID {bundle.payload.sourceChainId} (Ethereum Mainnet via Blockscout REST v2)</span>
+                    <span className="meta-caption">
+                      Public API, zero private indexers
+                    </span>
+                  </div>
 
-                <div className="meta-item">
-                  <span className="meta-key">Observation Window (UTC)</span>
-                  <span className="meta-val">
-                    {bundle.payload.observationWindow.startUtc.slice(0, 10)} to {bundle.payload.observationWindow.endUtc.slice(0, 10)} (30 days)
-                  </span>
-                  <span className="meta-caption">
-                    Calendar day boundaries computed in UTC
-                  </span>
-                </div>
+                  <div className="meta-item">
+                    <span className="meta-key">Observation Window (UTC)</span>
+                    <span className="meta-val">
+                      {bundle.payload.observationWindow.startUtc.slice(0, 10)} to {bundle.payload.observationWindow.endUtc.slice(0, 10)} (30 days)
+                    </span>
+                    <span className="meta-caption">
+                      Calendar day boundaries computed in UTC
+                    </span>
+                  </div>
 
-                <div className="meta-item">
-                  <span className="meta-key">Coverage Assessment</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "2px 0" }}>
-                    <span className={`badge ${bundle.payload.coverage.coverageStatus === "partial" ? "badge-warning" : "badge-success"}`}>
+                  <div className="meta-item">
+                    <span className="meta-key">Coverage Assessment</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "2px 0" }}>
+                      <span className={`badge ${bundle.payload.coverage.coverageStatus === "partial" ? "badge-warning" : "badge-success"}`}>
+                        {bundle.payload.coverage.coverageStatus === "complete_for_query"
+                          ? "Complete for Window"
+                          : bundle.payload.coverage.coverageStatus === "partial"
+                          ? "Partial Coverage"
+                          : "Unknown Coverage"}
+                      </span>
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
+                        ({bundle.payload.coverage.coverageStatus})
+                      </span>
+                    </div>
+                    <span className="meta-caption">
                       {bundle.payload.coverage.coverageStatus === "complete_for_query"
-                        ? "Complete for Window"
-                        : bundle.payload.coverage.coverageStatus === "partial"
-                        ? "Partial Coverage"
-                        : "Unknown Coverage"}
-                    </span>
-                    <span style={{ fontSize: "0.78rem", color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
-                      ({bundle.payload.coverage.coverageStatus})
+                        ? "All qualifying transactions within the declared 30-day window were retrieved."
+                        : "Pagination limit reached; some historical transactions may not be included."}
                     </span>
                   </div>
-                  <span className="meta-caption">
-                    {bundle.payload.coverage.coverageStatus === "complete_for_query"
-                      ? "All qualifying transactions within the declared 30-day window were retrieved."
-                      : "Pagination limit reached; some historical transactions may not be included."}
-                  </span>
-                </div>
 
-                <div className="meta-item">
-                  <span className="meta-key">Snapshot Version & Timestamp</span>
-                  <span className="meta-val">
-                    v{bundle.payload.snapshotVersion} · Sealed at {bundle.payload.generationTimestamp.replace("T", " ").replace(".000Z", " UTC")}
-                  </span>
-                </div>
-
-                <div className="meta-item">
-                  <span className="meta-key">Canonical SHA-256 Payload Digest</span>
-                  <div className="meta-val-accent">
-                    {bundle.integrity.digest}
+                  <div className="meta-item">
+                    <span className="meta-key">Snapshot Version & Timestamp</span>
+                    <span className="meta-val">
+                      v{bundle.payload.snapshotVersion} · Sealed at {bundle.payload.generationTimestamp.replace("T", " ").replace(".000Z", " UTC")}
+                    </span>
                   </div>
-                  <span className="meta-caption">
-                    Cryptographic seal covering the canonical JSON payload (RFC 8785). Any modification invalidates this hash.
-                  </span>
+
+                  <div className="meta-item">
+                    <span className="meta-key">Canonical SHA-256 Payload Digest</span>
+                    <div className="meta-val-accent">
+                      {bundle.integrity.digest}
+                    </div>
+                    <span className="meta-caption">
+                      Cryptographic seal covering the canonical JSON payload (RFC 8785). Any modification invalidates this hash.
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </details>
             </div>
           </div>
         </div>

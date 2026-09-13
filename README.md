@@ -12,6 +12,12 @@ An independent consumer application (App Two) can import, validate, and verify t
 
 ---
 
+## Tech Stack
+
+TypeScript, Next.js 15, React, Node.js, Zod, Ethereum (Mainnet), Blockscout REST API, Groq, Anthropic Claude, npm workspaces.
+
+---
+
 ## Architecture & Monorepo Layout
 
 Signal Passport is structured as clean TypeScript packages and two completely decoupled web applications:
