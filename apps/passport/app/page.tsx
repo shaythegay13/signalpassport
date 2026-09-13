@@ -260,6 +260,16 @@ export default function PassportApp() {
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <span className="badge">Passport Generator</span>
           <span className="badge badge-success">Blockscout REST v2 Live</span>
+          <a
+            href="https://signal-passport-verifier-saved-by-the-plates-projects.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="badge"
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
+          >
+            Open Offline Verifier
+            <span className="material-symbols-outlined" style={{ fontSize: "0.9rem" }}>open_in_new</span>
+          </a>
         </div>
       </header>
 
