@@ -15,12 +15,21 @@ const FROZEN_EXAMPLE_SUBJECT = "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8";
 const FROZEN_START_UTC = "2026-08-13T00:00:00.000Z";
 const FROZEN_END_UTC = "2026-09-12T16:08:11.000Z";
 
+// M12 follow-up: a second, explicitly-opt-in frozen window over the SAME real example
+// wallet's real history, only used when the client explicitly requests it (never inferred
+// from the address alone). Does not change the default 30-day window for any other request.
+// See scripts/generate-extended-fixture.ts for how this exact boundary was derived (100 real,
+// successful, outgoing transactions, verified live against Blockscout).
+const FROZEN_EXTENDED_START_UTC = "2024-12-19T20:32:00.000Z";
+const FROZEN_EXTENDED_END_UTC = "2026-09-12T16:08:11.000Z";
+
 export async function POST(request: NextRequest) {
   let body: {
     address?: string;
     maxPages?: number;
     simulateProviderError?: boolean;
     simulateEmptyActivity?: boolean;
+    useExtendedWindow?: boolean;
   };
   try {
     body = await request.json();
@@ -31,7 +40,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { address, maxPages, simulateProviderError, simulateEmptyActivity } = body;
+  const { address, maxPages, simulateProviderError, simulateEmptyActivity, useExtendedWindow } = body;
   if (!address || typeof address !== "string") {
     return Response.json(
       { error: "Missing required 'address' string in request body" },
@@ -58,7 +67,10 @@ export async function POST(request: NextRequest) {
   let startUtc: string;
   let endUtc: string;
 
-  if (subjectAddress.toLowerCase() === FROZEN_EXAMPLE_SUBJECT.toLowerCase()) {
+  if (subjectAddress.toLowerCase() === FROZEN_EXAMPLE_SUBJECT.toLowerCase() && useExtendedWindow) {
+    startUtc = FROZEN_EXTENDED_START_UTC;
+    endUtc = FROZEN_EXTENDED_END_UTC;
+  } else if (subjectAddress.toLowerCase() === FROZEN_EXAMPLE_SUBJECT.toLowerCase()) {
     startUtc = FROZEN_START_UTC;
     endUtc = FROZEN_END_UTC;
   } else {

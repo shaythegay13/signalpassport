@@ -32,6 +32,7 @@ export default function PassportApp() {
 
   function handleAddressChange(val: string) {
     setAddressInput(val);
+    setUseExtendedWindow(false);
     if (!val.trim()) {
       setAddressError(null);
       return;
@@ -44,9 +45,18 @@ export default function PassportApp() {
     }
   }
 
+  const [useExtendedWindow, setUseExtendedWindow] = useState<boolean>(false);
+
   function useExample() {
     setAddressInput(EXAMPLE_SUBJECT);
     setAddressError(null);
+    setUseExtendedWindow(false);
+  }
+
+  function useExtendedExample() {
+    setAddressInput(EXAMPLE_SUBJECT);
+    setAddressError(null);
+    setUseExtendedWindow(true);
   }
 
   async function handleAnalyze(e: React.FormEvent) {
@@ -57,6 +67,7 @@ export default function PassportApp() {
       setAddressError(validation.error || "Invalid Ethereum address");
       return;
     }
+    const isExtended = useExtendedWindow && cleanAddress.toLowerCase() === EXAMPLE_SUBJECT.toLowerCase();
 
     setErrorMessage(null);
     setIsProviderError(false);
@@ -74,7 +85,8 @@ export default function PassportApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: cleanAddress,
-          maxPages: 10
+          maxPages: 30,
+          useExtendedWindow: isExtended
         })
       });
 
@@ -239,7 +251,7 @@ export default function PassportApp() {
       <header className="app-header">
         <div className="logo-group">
           <div>
-            <h1 style={{ margin: 0, fontSize: "1.6rem" }}>Signal Passport</h1>
+            <h1 className="text-headline-xl">Signal Passport</h1>
             <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "0.85rem" }}>
               Portable, tamper-evident onchain credentials for fintech
             </p>
@@ -269,7 +281,7 @@ export default function PassportApp() {
         <section className="card">
           <div className="card-header-bar">
             <div className="card-header-left">
-              <span className="card-header-icon">⚙️</span>
+              <span className="card-header-icon material-symbols-outlined">settings</span>
               <span className="card-header-tag">PARAMETERS // WALLET QUERY</span>
             </div>
             <span className="badge badge-neutral">Public Explorer Ingestion</span>
@@ -316,6 +328,13 @@ export default function PassportApp() {
               </button>
               <span style={{ marginLeft: "6px" }}>(Active Ethereum EOA with 28 qualifying transactions)</span>
             </div>
+            <div className="example-box" style={{ marginTop: "6px" }}>
+              Same wallet, richer real history:
+              <button type="button" onClick={useExtendedExample}>
+                {EXAMPLE_SUBJECT}
+              </button>
+              <span style={{ marginLeft: "6px" }}>(same real EOA, 100 qualifying transactions over its real ~21-month history)</span>
+            </div>
           </form>
 
           {/* Live Pipeline Progress (Active State) */}
@@ -323,8 +342,8 @@ export default function PassportApp() {
             <div className="progress-list">
               {steps.map((s, idx) => (
                 <div key={idx} className="progress-step">
-                  <span className="step-indicator">
-                    {s.stage === "error" ? "❌" : s.stage === "complete" ? "✔" : "⏳"}
+                  <span className="step-indicator material-symbols-outlined">
+                    {s.stage === "error" ? "cancel" : s.stage === "complete" ? "check_circle" : "hourglass_empty"}
                   </span>
                   <div className="step-content">
                     <div className="step-title">
@@ -364,7 +383,7 @@ export default function PassportApp() {
         /* Collapsed Input Bar when bundle present (M11) */
         <div className="compact-summary-bar">
           <div className="compact-summary-left">
-            <span className="compact-summary-icon">⚙️</span>
+            <span className="compact-summary-icon material-symbols-outlined">settings</span>
             <span className="compact-summary-title">Subject Wallet:</span>
             <span className="compact-summary-val font-mono">{bundle.payload.subjectAddress}</span>
             <span className="badge badge-success">Sealed Artifact</span>
@@ -407,8 +426,8 @@ export default function PassportApp() {
           <div className="progress-list" style={{ marginTop: 0 }}>
             {steps.map((s, idx) => (
               <div key={idx} className="progress-step">
-                <span className="step-indicator">
-                  {s.stage === "error" ? "❌" : s.stage === "complete" ? "✔" : "⏳"}
+                <span className="step-indicator material-symbols-outlined">
+                  {s.stage === "error" ? "cancel" : s.stage === "complete" ? "check_circle" : "hourglass_empty"}
                 </span>
                 <div className="step-content">
                   <div className="step-title">
@@ -431,7 +450,7 @@ export default function PassportApp() {
             <div className="card" style={{ marginBottom: 0 }}>
               <div className="card-header-bar">
                 <div className="card-header-left">
-                  <span className="card-header-icon">📊</span>
+                  <span className="card-header-icon material-symbols-outlined">bar_chart</span>
                   <span className="card-header-tag">VERIFIED CLAIMS // 30-DAY WINDOW</span>
                 </div>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -455,7 +474,7 @@ export default function PassportApp() {
                     className="primary-btn export-btn-top"
                     onClick={handleExport}
                   >
-                    <span>📥</span> Export Passport (.json)
+                    <span className="material-symbols-outlined">download</span> Export Passport (.json)
                   </button>
                 </div>
               </div>
@@ -476,7 +495,7 @@ export default function PassportApp() {
 
               {/* Move 4: Factual Record Notice (Streamlined Inline Card Treatment - M11) */}
               <div className="verdict-inline-note">
-                <span className="verdict-card-icon">⚖️</span>
+                <span className="verdict-card-icon material-symbols-outlined">balance</span>
                 <div className="verdict-inline-body">
                   <strong className="verdict-inline-title">A factual record, not a verdict:</strong>{" "}
                   <span className="verdict-inline-text">
@@ -549,6 +568,117 @@ export default function PassportApp() {
                   </div>
                 );
               })()}
+
+              {/* M12: Real data visualization — computed client-side from actual
+                  evidence[].timestamp / evidence[].recipient. No fabricated fields;
+                  see docs/prompts/M12-typography-icons-dataviz.md */}
+              {(() => {
+                const windowStart = new Date(bundle.payload.observationWindow.startUtc);
+                const windowEnd = new Date(bundle.payload.observationWindow.endUtc);
+                const dayMs = 24 * 60 * 60 * 1000;
+                const startDay = Date.UTC(windowStart.getUTCFullYear(), windowStart.getUTCMonth(), windowStart.getUTCDate());
+                const endDay = Date.UTC(windowEnd.getUTCFullYear(), windowEnd.getUTCMonth(), windowEnd.getUTCDate());
+                const totalDays = Math.max(1, Math.round((endDay - startDay) / dayMs) + 1);
+
+                // Chart A: daily activity buckets, real counts from evidence timestamps
+                const dailyCounts: number[] = new Array(totalDays).fill(0);
+                for (const rec of allEvidenceRecords) {
+                  const t = new Date(rec.timestamp);
+                  const recDay = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+                  const idx = Math.round((recDay - startDay) / dayMs);
+                  if (idx >= 0 && idx < totalDays) dailyCounts[idx] += 1;
+                }
+                const maxDailyCount = Math.max(0, ...dailyCounts);
+                const activityStepFor = (count: number) => {
+                  if (count === 0 || maxDailyCount === 0) return 0;
+                  return Math.max(1, Math.ceil((count / maxDailyCount) * 4));
+                };
+                const activeDayCount = dailyCounts.filter((c) => c > 0).length;
+
+                // Chart B: recipient frequency, real counts from evidence recipients
+                const recipientCounts = new Map<string, number>();
+                for (const rec of allEvidenceRecords) {
+                  const key = rec.recipient ? rec.recipient : "__contract_creation__";
+                  recipientCounts.set(key, (recipientCounts.get(key) || 0) + 1);
+                }
+                const sortedRecipients = Array.from(recipientCounts.entries()).sort((a, b) => b[1] - a[1]);
+                const topRecipients = sortedRecipients.slice(0, 5);
+                const otherRecipients = sortedRecipients.slice(5);
+                const otherCount = otherRecipients.reduce((sum, [, c]) => sum + c, 0);
+                const maxRecipientCount = topRecipients.length > 0 ? topRecipients[0][1] : 0;
+
+                if (allEvidenceRecords.length === 0) return null;
+
+                return (
+                  <div className="charts-section">
+                    <div className="chart-panel">
+                      <div className="chart-panel-title">
+                        <span className="material-symbols-outlined">calendar_month</span>
+                        <span className="text-headline-md">Activity by Day</span>
+                      </div>
+                      <div className="activity-strip">
+                        {dailyCounts.map((count, idx) => {
+                          const cellDate = new Date(startDay + idx * dayMs);
+                          const dateLabel = cellDate.toISOString().slice(0, 10);
+                          const step = activityStepFor(count);
+                          return (
+                            <div
+                              key={idx}
+                              className="activity-cell"
+                              style={{ background: `var(--activity-${step})` }}
+                              data-tooltip={`${dateLabel}: ${count} transaction${count === 1 ? "" : "s"}`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="chart-caption">
+                        {activeDayCount} of {totalDays} days in this window had qualifying activity ({Math.round((activeDayCount / totalDays) * 100)}%). Darker cells mark days with more transactions.
+                      </div>
+                    </div>
+
+                    <div className="chart-panel">
+                      <div className="chart-panel-title">
+                        <span className="material-symbols-outlined">bar_chart</span>
+                        <span className="text-headline-md">Recipient Frequency</span>
+                      </div>
+                      <div className="recipient-bars">
+                        {topRecipients.map(([key, count]) => {
+                          const label = key === "__contract_creation__"
+                            ? "Contract Creation"
+                            : `${key.slice(0, 8)}...${key.slice(-6)}`;
+                          const widthPct = maxRecipientCount > 0 ? Math.max(4, (count / maxRecipientCount) * 100) : 0;
+                          return (
+                            <div className="recipient-bar-row" key={key}>
+                              <span className="recipient-bar-label" style={{ fontFamily: key === "__contract_creation__" ? "var(--font-sans)" : "var(--font-mono)" }}>
+                                {label}
+                              </span>
+                              <div className="recipient-bar-track">
+                                <div className="recipient-bar-fill" style={{ width: `${widthPct}%` }} />
+                              </div>
+                              <span className="recipient-bar-value">{count}</span>
+                            </div>
+                          );
+                        })}
+                        {otherRecipients.length > 0 && (
+                          <div className="recipient-bar-row">
+                            <span className="recipient-bar-label">Other ({otherRecipients.length} recipients)</span>
+                            <div className="recipient-bar-track">
+                              <div
+                                className="recipient-bar-fill"
+                                style={{ width: `${maxRecipientCount > 0 ? Math.max(4, (otherCount / maxRecipientCount) * 100) : 0}%` }}
+                              />
+                            </div>
+                            <span className="recipient-bar-value">{otherCount}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="chart-caption">
+                        Ranked by transaction count across all {allEvidenceRecords.length} qualifying transactions in this window.
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* AI Qualitative Synthesis (PRD §10) */}
@@ -568,7 +698,7 @@ export default function PassportApp() {
                     onClick={handleGenerateExplanation}
                     style={{ fontSize: "0.85rem", padding: "7px 14px" }}
                   >
-                    ✨ Generate AI Summary
+                    <span className="material-symbols-outlined">auto_awesome</span> Generate AI Summary
                   </button>
                 )}
                 {explanation && (
@@ -589,7 +719,7 @@ export default function PassportApp() {
 
               {isExplaining && (
                 <div style={{ padding: "14px 16px", background: "var(--bg)", borderRadius: "6px", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "10px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                  <span>⏳</span> Querying model and verifying quantitative grounding against immutable claims...
+                  <span className="material-symbols-outlined">hourglass_empty</span> Querying model and verifying quantitative grounding against immutable claims...
                 </div>
               )}
 
@@ -667,7 +797,7 @@ export default function PassportApp() {
 
               {/* Independent Verifiability Notice (PRD §7/§9) */}
               <div className="verifiability-box" style={{ margin: "14px 0 10px 0" }}>
-                <span className="verifiability-box-icon">🔍</span>
+                <span className="verifiability-box-icon material-symbols-outlined">search</span>
                 <span>
                   Every transaction below is public. Click any row to confirm it yourself on Blockscout, a public blockchain explorer — you don't have to take Signal Passport's word for any of it.
                 </span>
@@ -735,7 +865,7 @@ export default function PassportApp() {
             <div className="sidebar-card">
               <div className="card-header-bar" style={{ paddingBottom: "10px", marginBottom: "14px" }}>
                 <div className="card-header-left">
-                  <span className="card-header-icon">📦</span>
+                  <span className="card-header-icon material-symbols-outlined">inventory_2</span>
                   <span className="card-header-tag">CREDENTIAL ENVELOPE</span>
                 </div>
                 <span className="badge badge-neutral">Sealed Artifact</span>
@@ -750,7 +880,7 @@ export default function PassportApp() {
                 onClick={handleExport}
                 style={{ width: "100%", justifyContent: "center", padding: "12px 18px", fontSize: "0.95rem" }}
               >
-                <span>📥</span> Export Passport Bundle (.json)
+                <span className="material-symbols-outlined">download</span> Export Passport Bundle (.json)
               </button>
               <div style={{ marginTop: "12px", fontSize: "0.76rem", color: "var(--text-dim)", lineHeight: 1.4 }}>
                 Conforms to schema version 1.0.0. Integrity protected by SHA-256 over RFC 8785 canonical JSON.
@@ -762,7 +892,7 @@ export default function PassportApp() {
               <details open className="sidebar-meta-details">
                 <summary className="sidebar-meta-summary">
                   <div className="card-header-left">
-                    <span className="card-header-icon">🔐</span>
+                    <span className="card-header-icon material-symbols-outlined">lock</span>
                     <span className="card-header-tag">PROVENANCE // METADATA</span>
                   </div>
                   <span className="sidebar-meta-hint">Toggle details ▼</span>

@@ -16,6 +16,13 @@
   --danger-bg: rgba(255, 180, 171, 0.1);
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   --font-sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* M12: sequential activity ramp, tints of the existing mint accent (not a new hue) */
+  --activity-0: var(--surface-raised);
+  --activity-1: color-mix(in srgb, var(--accent) 25%, var(--surface-raised));
+  --activity-2: color-mix(in srgb, var(--accent) 50%, var(--surface-raised));
+  --activity-3: color-mix(in srgb, var(--accent) 75%, var(--surface-raised));
+  --activity-4: var(--accent);
 }
 
 * {
@@ -35,6 +42,48 @@ body {
   max-width: 1180px;
   margin: 0 auto;
   padding: 16px 20px 60px;
+}
+
+/* M12: real type scale (replaces ad hoc inline font-size styles) */
+.text-headline-xl {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.text-headline-lg {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.text-headline-md {
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.text-label-uppercase {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+/* M12: Material Symbols icon helper (replaces emoji) */
+.material-symbols-outlined {
+  font-variation-settings: 'opsz' 20;
+  font-size: 1.1em;
+  vertical-align: middle;
+  line-height: 1;
+  display: inline-block;
 }
 
 /* Persistent Micro-Status Strip */
@@ -200,8 +249,9 @@ header.app-header {
 
 .card-title {
   margin: 0 0 8px 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .card-desc {
@@ -525,8 +575,9 @@ button.secondary-btn:hover {
 
 .ai-header-title {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .ai-desc {

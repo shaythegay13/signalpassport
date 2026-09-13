@@ -18,6 +18,12 @@ TypeScript, Next.js 15, React, Node.js, Zod, Ethereum (Mainnet), Blockscout REST
 
 ---
 
+## Pre-Existing Work Disclosure
+
+Built from scratch during this hackathon. We referenced a prior project (LedgerLens) for a small amount of AI-integration plumbing — roughly 90 lines adapted for provider configuration and output validation — but rewrote all domain logic. Every core system (wallet analysis, metric computation, cryptographic sealing, both applications) is new. Full line-by-line audit in [`docs/REUSE.md`](docs/REUSE.md) and the [Originality & Reuse Disclosure](#originality--reuse-disclosure) section below.
+
+---
+
 ## Architecture & Monorepo Layout
 
 Signal Passport is structured as clean TypeScript packages and two completely decoupled web applications:

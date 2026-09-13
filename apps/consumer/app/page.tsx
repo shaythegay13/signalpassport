@@ -88,7 +88,7 @@ export default function ConsumerApp() {
       <header className="app-header">
         <div className="logo-group">
           <div>
-            <h1 style={{ margin: 0, fontSize: "1.6rem" }}>Signal Passport</h1>
+            <h1 className="text-headline-xl">Signal Passport</h1>
             <p style={{ margin: "4px 0 0 0", color: "var(--text-muted)", fontSize: "0.85rem" }}>
               Independent offline passport verifier
             </p>
@@ -119,7 +119,7 @@ export default function ConsumerApp() {
         <section className="card">
           <div className="card-header-bar">
             <div className="card-header-left">
-              <span className="card-header-icon">📥</span>
+              <span className="card-header-icon material-symbols-outlined">download</span>
               <span className="card-header-tag">BUNDLE IMPORT // OFFLINE INPUT</span>
             </div>
             <span className="badge badge-neutral">Air-Gapped Verifier</span>
@@ -146,7 +146,7 @@ export default function ConsumerApp() {
               accept=".json,application/json"
               onChange={handleFileSelect}
             />
-            <div className="dropzone-icon">📄</div>
+            <div className="dropzone-icon material-symbols-outlined">description</div>
             <div className="dropzone-text">
               {fileName ? `Loaded: ${fileName}` : "Click to select or drag and drop a Passport JSON file"}
             </div>
@@ -162,7 +162,7 @@ export default function ConsumerApp() {
         /* Collapsed Import Bar when result present (M11) */
         <div className="compact-summary-bar">
           <div className="compact-summary-left">
-            <span className="compact-summary-icon">📥</span>
+            <span className="compact-summary-icon material-symbols-outlined">download</span>
             <span className="compact-summary-title">Imported File:</span>
             <span className="compact-summary-val font-mono">{fileName || "passport-bundle.json"}</span>
             <span className={`badge ${result.isValid ? "badge-success" : "badge-danger"}`}>
@@ -194,7 +194,7 @@ export default function ConsumerApp() {
             <div className="card" style={{ marginBottom: 0 }}>
               <div className="card-header-bar">
                 <div className="card-header-left">
-                  <span className="card-header-icon">🔍</span>
+                  <span className="card-header-icon material-symbols-outlined">search</span>
                   <span className="card-header-tag">AUDIT LOG // DETERMINISTIC VERIFICATION</span>
                 </div>
                 <span className={`badge ${result.isValid ? "badge-success" : "badge-danger"}`}>
@@ -202,7 +202,7 @@ export default function ConsumerApp() {
                 </span>
               </div>
 
-              <h2 style={{ marginTop: 0, marginBottom: "4px", fontSize: "1.3rem" }}>Offline Verification &amp; Verified Claims</h2>
+              <h2 className="text-headline-lg" style={{ marginBottom: "4px" }}>Offline Verification &amp; Verified Claims</h2>
               <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", margin: "0 0 16px 0" }}>
                 Cryptographic integrity and publication status evaluated locally by this consumer application:
               </p>
@@ -257,7 +257,7 @@ export default function ConsumerApp() {
 
                   {/* Factual Record Notice (Streamlined Inline Card Treatment - M11) */}
                   <div className="verdict-inline-note" style={{ marginBottom: "14px" }}>
-                    <span className="verdict-card-icon">⚖️</span>
+                    <span className="verdict-card-icon material-symbols-outlined">balance</span>
                     <div className="verdict-inline-body">
                       <strong className="verdict-inline-title">A factual record, not a verdict:</strong>{" "}
                       <span className="verdict-inline-text">
@@ -335,7 +335,7 @@ export default function ConsumerApp() {
 
                   {/* Independent Verifiability Notice (PRD §7/§9) */}
                   <div className="verifiability-box" style={{ marginTop: "14px" }}>
-                    <span className="verifiability-box-icon">🔍</span>
+                    <span className="verifiability-box-icon material-symbols-outlined">search</span>
                     <span>
                       Every transaction in this bundle is public. Click any source reference to confirm it yourself on Blockscout, a public blockchain explorer — you don't have to take Signal Passport's word for any of it.
                     </span>
@@ -354,8 +354,8 @@ export default function ConsumerApp() {
                       <div key={idx} className={`check-chip ${st.passed ? "passed" : "failed"}`}>
                         <div className="check-chip-header">
                           <div className="check-chip-left">
-                            <span className={`check-chip-num ${st.passed ? "passed" : "failed"}`}>
-                              {st.passed ? "✔" : "❌"}
+                            <span className={`check-chip-num material-symbols-outlined ${st.passed ? "passed" : "failed"}`}>
+                              {st.passed ? "check_circle" : "cancel"}
                             </span>
                             <span className="check-chip-name">{st.name}</span>
                           </div>
@@ -376,7 +376,7 @@ export default function ConsumerApp() {
               <div className="raw-payload-card">
                 <details className="raw-payload-details">
                   <summary>
-                    <span className="card-header-icon">📄</span>
+                    <span className="card-header-icon material-symbols-outlined">description</span>
                     <span>Inspect Raw JSON Payload ({result.bundle.payload.evidence.length} evidence records, {result.bundle.payload.claims.length} claims)</span>
                     <span className="raw-payload-toggle-hint">Click to expand ▼</span>
                   </summary>
@@ -456,7 +456,7 @@ export default function ConsumerApp() {
             <div className="sidebar-card">
               <div className="card-header-bar" style={{ paddingBottom: "10px", marginBottom: "14px" }}>
                 <div className="card-header-left">
-                  <span className="card-header-icon">🛡️</span>
+                  <span className="card-header-icon material-symbols-outlined">shield</span>
                   <span className="card-header-tag">VERIFICATION STATUS</span>
                 </div>
                 <span className={`badge ${result.isValid ? "badge-success" : "badge-danger"}`}>
@@ -479,7 +479,7 @@ export default function ConsumerApp() {
                 <details open className="sidebar-meta-details">
                   <summary className="sidebar-meta-summary">
                     <div className="card-header-left">
-                      <span className="card-header-icon">🔐</span>
+                      <span className="card-header-icon material-symbols-outlined">lock</span>
                       <span className="card-header-tag">ENVELOPE METADATA</span>
                     </div>
                     <span className="sidebar-meta-hint">Toggle details ▼</span>
