@@ -49,9 +49,9 @@ export default function PassportApp() {
     setAddressError(null);
   }
 
-  async function handleAnalyze(e?: React.FormEvent, overrideAddress?: string) {
-    if (e) e.preventDefault();
-    const cleanAddress = (overrideAddress ?? addressInput).trim();
+  async function handleAnalyze(e: React.FormEvent) {
+    e.preventDefault();
+    const cleanAddress = addressInput.trim();
     const validation = validateEthereumAddress(cleanAddress);
     if (!validation.isValid) {
       setAddressError(validation.error || "Invalid Ethereum address");
@@ -152,14 +152,6 @@ export default function PassportApp() {
       ]);
     }
   }
-
-  React.useEffect(() => {
-    (window as any).__runAnalyze = (addr?: string) => {
-      const targetAddr = addr || EXAMPLE_SUBJECT;
-      handleAddressChange(targetAddr);
-      return handleAnalyze(undefined, targetAddr);
-    };
-  });
 
   async function handleGenerateExplanation() {
     if (!bundle) return;

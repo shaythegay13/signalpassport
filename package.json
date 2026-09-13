@@ -7,7 +7,6 @@
     "test": "tsx --test",
     "dev:passport": "npm run dev --prefix apps/passport",
     "dev:consumer": "npm run dev --prefix apps/consumer",
-    "dev": "concurrently -n GENERATOR,VERIFIER -c blue,magenta \"npm:dev:passport\" \"npm:dev:consumer\"",
     "build:passport": "npm run build --prefix apps/passport",
     "build:consumer": "npm run build --prefix apps/consumer"
   },
@@ -15,7 +14,6 @@
     "@types/node": "^24.13.4",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "concurrently": "^10.0.5",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   },

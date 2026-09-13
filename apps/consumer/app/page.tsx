@@ -45,10 +45,6 @@ export default function ConsumerApp() {
     }
   }
 
-  React.useEffect(() => {
-    (window as any).__loadPassportFile = processFile;
-  });
-
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragActive(false);
@@ -242,8 +238,8 @@ export default function ConsumerApp() {
                 </div>
               </div>
 
-              {/* Display Bundle Data (Read-only from bundle, never recomputed) */}
-              {result.bundle && (
+              {/* Display Bundle Data (Only when verification succeeded) */}
+              {result.isValid && result.bundle && (
                 <>
                   {/* Partial Coverage Warning (PRD §14) */}
                   {result.bundle.payload.coverage.coverageStatus === "partial" && (
@@ -333,9 +329,25 @@ export default function ConsumerApp() {
                     );
                   })()}
 
-                  {/* Compact 4-Check Checklist Grid (M11) */}
-                  <div style={{ marginTop: "18px", marginBottom: "8px", fontSize: "0.88rem", fontWeight: 600, color: "var(--text)" }}>
-                    Deterministic Verification Checks (4/4 evaluated locally):
+                  <div style={{ marginTop: "14px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                    Verified against {result.bundle.payload.evidence.length} self-contained onchain evidence records stored in the bundle. No external API was consulted.
+                  </div>
+
+                  {/* Independent Verifiability Notice (PRD §7/§9) */}
+                  <div className="verifiability-box" style={{ marginTop: "14px" }}>
+                    <span className="verifiability-box-icon">🔍</span>
+                    <span>
+                      Every transaction in this bundle is public. Click any source reference to confirm it yourself on Blockscout, a public blockchain explorer — you don't have to take Signal Passport's word for any of it.
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* Compact 4-Check Checklist Grid (M11) - Renders on both success and failure paths */}
+              {result.steps.length > 0 && (
+                <div style={{ marginTop: result.bundle ? "20px" : "14px" }}>
+                  <div style={{ marginBottom: "8px", fontSize: "0.88rem", fontWeight: 600, color: "var(--text)" }}>
+                    Deterministic Verification Checks ({result.steps.length} evaluated locally):
                   </div>
                   <div className="checklist-compact-grid">
                     {result.steps.map((st, idx) => (
@@ -355,24 +367,12 @@ export default function ConsumerApp() {
                       </div>
                     ))}
                   </div>
-
-                  <div style={{ marginTop: "14px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                    Verified against {result.bundle.payload.evidence.length} self-contained onchain evidence records stored in the bundle. No external API was consulted.
-                  </div>
-
-                  {/* Independent Verifiability Notice (PRD §7/§9) */}
-                  <div className="verifiability-box" style={{ marginTop: "14px" }}>
-                    <span className="verifiability-box-icon">🔍</span>
-                    <span>
-                      Every transaction in this bundle is public. Click any source reference to confirm it yourself on Blockscout, a public blockchain explorer — you don't have to take Signal Passport's word for any of it.
-                    </span>
-                  </div>
-                </>
+                </div>
               )}
             </div>
 
             {/* Expandable Raw Payload View (M11) */}
-            {result.bundle && (
+            {result.isValid && result.bundle && (
               <div className="raw-payload-card">
                 <details className="raw-payload-details">
                   <summary>
@@ -405,7 +405,7 @@ export default function ConsumerApp() {
             )}
 
             {/* Imported AI Explanation (PRD §10 - Display Only) */}
-            {result.bundle?.explanation ? (
+            {result.isValid && result.bundle?.explanation ? (
               <div className="ai-section">
                 <div className="ai-header">
                   <div className="ai-header-left">
@@ -443,7 +443,7 @@ export default function ConsumerApp() {
                   )}
                 </div>
               </div>
-            ) : result.bundle ? (
+            ) : result.isValid && result.bundle ? (
               <div style={{ padding: "12px 16px", background: "var(--surface)", borderRadius: "6px", border: "1px solid var(--border)", fontSize: "0.82rem", color: "var(--text-dim)" }}>
                 No optional AI narrative attached to this bundle. (Passport bundles without explanations are fully valid and cryptographically verifiable).
               </div>
@@ -474,7 +474,7 @@ export default function ConsumerApp() {
             </div>
 
             {/* Technical Metadata & Provenance Panel (Collapsible - M11) */}
-            {result.bundle && (
+            {result.isValid && result.bundle && (
               <div className="sidebar-card">
                 <details open className="sidebar-meta-details">
                   <summary className="sidebar-meta-summary">
