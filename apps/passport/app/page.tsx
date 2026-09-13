@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { validateEthereumAddress } from "@signal-passport/analysis";
-import { METRIC_LABELS } from "@signal-passport/analysis";
 import type { PassportBundle, Claim, EvidenceRecord, AiExplanation } from "@signal-passport/schema";
 
 const EXAMPLE_SUBJECT = "0xc82f8B79Cd34bD98b1abEC72475F2a73Eb15CFA8";
@@ -19,7 +18,6 @@ export default function PassportApp() {
   const [steps, setSteps] = useState<PipelineStep[]>([]);
   const [currentStage, setCurrentStage] = useState<string>("idle");
   const [bundle, setBundle] = useState<PassportBundle | null>(null);
-  const [selectedMetricType, setSelectedMetricType] = useState<string>("observed_transaction_count");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProviderError, setIsProviderError] = useState<boolean>(false);
 
@@ -205,22 +203,12 @@ export default function PassportApp() {
     URL.revokeObjectURL(url);
   }
 
-  // Evidence drill-down records for selected claim
-  const selectedClaim = bundle?.payload.claims.find((c) => c.metricType === selectedMetricType);
-  const evidenceMap = new Map<string, EvidenceRecord>();
-  if (bundle) {
-    for (const ev of bundle.payload.evidence) {
-      evidenceMap.set(ev.evidenceId, ev);
-    }
-  }
-
-  const selectedEvidenceRecords: EvidenceRecord[] = selectedClaim
-    ? selectedClaim.evidenceIds.map((id) => evidenceMap.get(id)!).filter(Boolean)
-    : [];
+  // Evidence records (all qualifying transactions backing the claims)
+  const allEvidenceRecords: EvidenceRecord[] = bundle ? bundle.payload.evidence : [];
 
   const visibleEvidenceRecords = showAllEvidence
-    ? selectedEvidenceRecords
-    : selectedEvidenceRecords.slice(0, 8);
+    ? allEvidenceRecords
+    : allEvidenceRecords.slice(0, 8);
 
   return (
     <div className="shell">
@@ -430,7 +418,7 @@ export default function PassportApp() {
 
               <h2 style={{ margin: "4px 0 8px 0", fontSize: "1.4rem" }}>Verified Activity Metrics</h2>
               <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", margin: "0 0 18px 0", lineHeight: 1.5 }}>
-                Deterministic calculations over the 30-day observation window ({bundle.payload.observationWindow.startUtc.slice(0, 10)} to {bundle.payload.observationWindow.endUtc.slice(0, 10)}). Click any metric card to inspect its supporting evidence.
+                Deterministic calculations over the 30-day observation window ({bundle.payload.observationWindow.startUtc.slice(0, 10)} to {bundle.payload.observationWindow.endUtc.slice(0, 10)}).
               </p>
 
               {/* Partial Coverage Notice (PRD §14) */}
@@ -503,13 +491,10 @@ export default function PassportApp() {
                       const claim = bundle.payload.claims.find((c) => c.metricType === m.type);
                       const val = claim ? claim.value : 0;
                       const backingCount = claim ? claim.evidenceIds.length : 0;
-                      const isSelected = selectedMetricType === m.type;
-
                       return (
                         <div
                           key={m.type}
-                          className={`metric-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => setSelectedMetricType(m.type)}
+                          className="metric-card"
                         >
                           <div className="metric-label">{m.label}</div>
                           <div className="metric-val">{val}</div>
@@ -618,26 +603,26 @@ export default function PassportApp() {
               )}
             </div>
 
-            {/* Evidence Drill-down Drawer */}
+            {/* Evidence Drawer */}
             <div className="evidence-section">
               <div className="evidence-header-row">
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.05rem" }}>
-                    Supporting Evidence: {METRIC_LABELS[selectedMetricType as keyof typeof METRIC_LABELS] || selectedMetricType}
+                    Supporting Evidence
                   </h3>
                   <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "4px 0 0 0" }}>
-                    Every claim is backed by source-verified onchain records. Click any transaction hash to inspect in Blockscout.
+                    All three metrics above are computed from the same {allEvidenceRecords.length} qualifying transactions shown below.
                   </p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span className="badge">{selectedEvidenceRecords.length} Qualifying Transactions</span>
-                  {selectedEvidenceRecords.length > 8 && (
+                  <span className="badge">{allEvidenceRecords.length} Qualifying Transactions</span>
+                  {allEvidenceRecords.length > 8 && (
                     <button
                       type="button"
                       onClick={() => setShowAllEvidence(!showAllEvidence)}
                       style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "0.82rem", cursor: "pointer", textDecoration: "underline" }}
                     >
-                      {showAllEvidence ? "Show first 8 rows ▲" : `Show all ${selectedEvidenceRecords.length} rows ▼`}
+                      {showAllEvidence ? "Show first 8 rows ▲" : `Show all ${allEvidenceRecords.length} rows ▼`}
                     </button>
                   )}
                 </div>
@@ -651,7 +636,7 @@ export default function PassportApp() {
                 </span>
               </div>
 
-              {selectedEvidenceRecords.length === 0 ? (
+              {allEvidenceRecords.length === 0 ? (
                 <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "12px" }}>
                   0 backing transactions. No qualifying onchain activity met the observation scope criteria.
                 </p>

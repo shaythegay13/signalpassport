@@ -54,7 +54,7 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Accepted** |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Accepted** |
 | **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Accepted** |
-| **M9** | Visual reskin. Owner had Google Stitch generate visual concepts; the color/type/layout system is good but Stitch invented a fictional technical architecture (Ed25519 signatures, Merkle trees, RPC archive nodes, block-range windows, fake telemetry) alongside it. | Style-only adoption of the Stitch design tokens and structural layout (hero section, document card headers, 8/4 grid layout, verdict card treatment); zero fabricated technical terms anywhere in the diff (checked by grep); all M7/M8 content and wording unchanged; both apps visually consistent; no change to logic/schema/digest/API contracts. | Grep commands and empty output for the banned-term list; full test suite unchanged; cross-app proof rerun live; diff stat proving real structural change (>150 lines/app). | **Complete (Round 2 ready for review)** |
+| **M9** | Visual reskin. Owner had Google Stitch generate visual concepts; the color/type/layout system is good but Stitch invented a fictional technical architecture (Ed25519 signatures, Merkle trees, RPC archive nodes, block-range windows, fake telemetry) alongside it. | Style-only adoption of the Stitch design tokens and structural layout (hero section, document card headers, 8/4 grid layout, verdict card treatment); zero fabricated technical terms anywhere in the diff (checked by grep); all M7/M8 content and wording unchanged; both apps visually consistent; no change to logic/schema/digest/API contracts. | Grep commands and empty output for the banned-term list; full test suite unchanged; cross-app proof rerun live; diff stat proving real structural change (>150 lines/app). | **Accepted (round 2 structure), round 3 in progress (evidence UX)** |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -462,9 +462,27 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     - Live cross-app proof: `tests/cross-app-proof.ts` rerun live against running consumer (port 3001) with generator (port 3000) confirmed dead (ECONNREFUSED) — all 5 checks PASS 100%.
     - Hygiene: 0 BOMs across repo. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
 
+- **M9 round 2 — accepted.** Reviewer independently verified the structural claim this time
+  before accepting: reran `git diff HEAD~2 --stat` myself (758/528 real lines changed in
+  `page.tsx`, matching the report); reran the banned-term and M7/M8-wording grep independently
+  (both clean); read the actual CSS for `.result-grid` and confirmed it's a genuine
+  `grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)` with a mobile breakpoint, not a
+  relabeled div; traced the JSX nesting myself and confirmed `result-grid` > `result-main` /
+  `result-sidebar` as true siblings, matching the described layout; started a fresh App One
+  and confirmed the real analyze flow still works end-to-end. 63/63 tests, `ledgerlens/`
+  unmodified.
+
+- **M9 round 3 — complete (ready for review).** Dropped per-metric evidence filtering per owner decision:
+  - Removed `selectedMetricType` state, `isSelected`, `onClick`, and per-claim filtering logic from `apps/passport/app/page.tsx`. Metric cards are now plain, non-clickable display cards.
+  - Evidence section updated with single static heading **"Supporting Evidence"** and sub-caption: `"All three metrics above are computed from the same {allEvidenceRecords.length} qualifying transactions shown below."`
+  - Evidence table always shows full evidence set (`bundle.payload.evidence`) while preserving the 8-row default and "show all N" toggle.
+  - `apps/consumer/app/page.tsx` confirmed unaffected: metric cards were already non-interactive display-only.
+  - `.metric-card` CSS updated in both apps to `cursor: default` with hover/selection pseudo-classes removed.
+  - Verification: 63/63 tests pass, both Next.js builds exit 0, 0 BOMs, `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
+
 ## In Progress
 
-- **M9 — complete (Round 2 ready for review).** Structural restyling complete and verified across all criteria. Waiting for technical lead review.
+- Waiting for technical lead review on M9 round 3.
 
 ## Known Issues
 
