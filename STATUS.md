@@ -54,7 +54,7 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
 | **M5** | P0b AI explanation. **Gate: M0–M4 all accepted.** | The model receives only immutable claims and evidence IDs; output is validated for evidence references and quantitative claims before display; invalid output is discarded and replaced by a deterministic summary; a model failure cannot block Passport generation or export; the explanation is excluded from the canonical payload. | A test proving invented numbers and invented evidence IDs are both rejected; a demonstrated fallback path. | **Accepted** |
 | **M6** | Submission package: README, reuse disclosure, demo video, social copy. | Reserve the final two hours. Never trade away evidence visibility, coverage labels or App Two. | — | **Accepted** |
 | **M7** | Presentation and narrative polish. Added after owner reviewed the live app and found it unpresentable — internal spec jargon as UI copy, an unbounded debug-style progress log and evidence dump instead of a demo-ready page. | No change to any logic/schema/validation/digest/API contract; a first-time viewer with no PRD context can explain what the app does after 30 seconds; no raw spec jargon as the sole representation of a fact; progress log and evidence table have a bounded default view; every rewritten string stays factually accurate; App Two reviewed for the same issue. | Full test suite unchanged; cross-app proof rerun live; before/after page-structure description; reviewer spot-check of rewritten copy against live data. | **Accepted** |
-| **M8** | Narrative clarity. Added after a second owner review: the numbers still felt meaningless, no sense of who this is for, evidence didn't feel trustworthy to a lay viewer, and the owner kept expecting a verdict that the PRD explicitly forbids providing. | No new metric/score/badge/judgment anywhere; each metric has one honest arithmetic-only context line with no judgment words; a plain "why this exists" paragraph appears before analysis; an explicit "what this is not" statement (not a credit/trust/risk judgment) appears near the metrics, framed as a deliberate design choice per PRD §7/§9; an independent-verifiability sentence appears near the evidence table; no change to any calculation, schema, or API contract. | Exact new copy quoted in full for reviewer wording check; full test suite unchanged; diff showing `packages/`/API untouched; M5 AI tests rerun if its prompt was touched. | **Complete (ready for review)** |
+| **M9** | Visual reskin. Owner had Google Stitch generate visual concepts; the color/type/layout system is good but Stitch invented a fictional technical architecture (Ed25519 signatures, Merkle trees, RPC archive nodes, block-range windows, fake telemetry) alongside it. | Style-only adoption of the Stitch design tokens; zero fabricated technical terms anywhere in the diff (checked by grep); all M7/M8 content and wording unchanged; both apps visually consistent; no change to logic/schema/digest/API contracts. | Grep commands and empty output for the banned-term list; full test suite unchanged; cross-app proof rerun live. | **Complete (ready for review)** |
 | **P1** | Monad testnet registry. **Gate: P0 accepted AND at least 4 discretionary hours before the submission buffer.** Stop after 45 minutes if infrastructure blocks. | Per PRD §13. A localhost-only reference must not be presented as publicly retrievable. | Blocked by gate |
 
 ---
@@ -404,7 +404,31 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     - App Two (`apps/consumer`) updated with matching narrative polish: "Offline Verifier" branding, user-friendly step descriptions in the 4-step sequence, plain-language integrity status descriptions with PRD §8 caveats, and bounded metadata grids.
   - **Integrity, tests, and builds verified (Task 4)**: Zero lines of `packages/`, schemas, formulas, or API contracts modified. Full test suite passes (63/63 tests passing). Production builds for both apps succeed. Byte-cleanliness verified: 0 BOMs, 0 control bytes, 0 corrupted `?` bytes across 94 tracked files. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
 
-- **M8 — complete (ready for review).** Narrative clarity implemented across App One (`apps/passport`) and App Two (`apps/consumer`) per `docs/prompts/M8-narrative-clarity.md`:
+- **M8 — accepted.** Reviewer read the actual diff line-by-line rather than trusting the
+  report's quoted copy:
+  - **Reran `npm test` directly**: 63/63 pass, unchanged count as expected (no logic touched).
+  - **Independent `git diff HEAD~1` on `packages/` and both apps' API routes**: zero lines
+    changed, confirmed myself, not from the report's claim.
+  - **Read the full diff of both `page.tsx` files**: all four gaps' copy is present verbatim
+    or near-verbatim as specified, and — the part that actually matters — every arithmetic
+    context line is genuinely computed from real `bundle.payload.claims` and
+    `observationWindow` values inside an IIFE per component, not hardcoded strings; both
+    division-by-zero guards (`txCount > 0`, `uniqueRecipients > 0`) are present.
+  - **Ran my own banned-word grep across every added line** (`healthy|good|concerning|risky|
+    suspicious|normal|unusual`, case-insensitive): zero matches. The only new "active"-adjacent
+    text is the pre-existing "Active Days (UTC)" metric name and variable names, not a new
+    judgment.
+  - **Confirmed zero AI files touched** (`packages/analysis/src/ai`,
+    `apps/passport/app/api/explain`): empty diff, so M5's tests didn't need rerunning and
+    weren't at risk.
+  - **Confirmed placement**: the "factual record, not a verdict" notice sits directly above
+    the metric cards in both apps; the independent-verifiability sentence sits right before
+    the evidence table in App One (and the equivalent verification section in App Two), not
+    buried in the technical-details section.
+  - `ledgerlens/` still unmodified.
+  - Implementer's original report follows below for the exact quoted copy.
+
+  Narrative clarity implemented across App One (`apps/passport`) and App Two (`apps/consumer`) per `docs/prompts/M8-narrative-clarity.md`:
   - **Gap 1: Arithmetic-only derived context lines**: Added one derived context line per metric card in both App One and App Two. Pure arithmetic with division-by-zero guards (`txCount > 0`, `uniqueRecipients > 0`). Strictly zero judgment words (`healthy`, `good`, `concerning`, `risky`, `suspicious`, `normal`, `unusual`, etc. are entirely absent):
     - *Observed Transactions*: `"An average of one transaction every ${(windowDays / txCount).toFixed(1)} days"` (e.g. 1.1 days for 28 txs in 30 days).
     - *Active Days*: `"${activeDays} of ${windowDays} days in this window (${Math.round((activeDays / windowDays) * 100)}%)"` (e.g. "12 of 30 days in this window (40%)").
@@ -417,9 +441,15 @@ Acceptance criteria are binding. The evidence column states what the reviewer mu
     > "This is not a credit score, a trust rating, or a risk assessment. It does not identify who owns this wallet or say whether it can be trusted — it shows only what actually happened, with the evidence to check it yourself."
   - **Strict constraints verified**: No score, tier, badge, or evaluation added anywhere. Zero lines of `packages/`, schemas, formulas, AI prompts, or API routes modified (`git diff packages apps/*/app/api` empty). All 63 tests pass. Both Next.js builds exit 0. `ledgerlens/` untouched at `HEAD bd9b41c`. Byte-cleanliness: 0 BOMs.
 
+- **M9 — complete (ready for review).** Visual reskin from Google Stitch design tokens implemented across App One (`apps/passport`) and App Two (`apps/consumer`):
+  - **Design system token adoption (Task 1)**: Mapped all 16 palette tokens onto existing CSS variables in `apps/passport/app/globals.css` and `apps/consumer/app/globals.css` (`--bg: #131316`, `--surface: #1f1f22`, `--surface-raised: #2a2a2d`, `--border: #3c4a42`, `--border-active: #4edea3`, `--text: #e4e1e6`, `--text-muted: #bbcabf`, `--text-dim: #86948a`, `--accent: #4edea3`, `--accent-hover: #6ffbbe`, `--success: #10b981`, `--success-text: #4edea3`, `--warning: #ffb95f`, `--danger: #ffb4ab`, `--danger-bg: rgba(255, 180, 171, 0.1)`, `--font-mono: 'JetBrains Mono'`). Added `--font-sans: 'Hanken Grotesk'` applied to `body`. Added Google Fonts preconnect and stylesheet links in both apps' `layout.tsx`. Standardized border-radius: cards at `0.5rem`, buttons/inputs at `0.25rem`, badges at `9999px`. Accessible contrast verified (primary button text `#0b1f14` on `#4edea3` yields >10:1 ratio).
+  - **Layout rhythm & real architecture status strip (Task 2)**: Added persistent micro-status strip to both apps containing ONLY genuine architectural telemetry (App One: Ethereum Mainnet (1), Blockscout REST v2 Public API, 30 Calendar Days (UTC), SHA-256 (RFC 8785); App Two: Offline Verifier (Air-Gapped), Local Host · Zero Network, Schema v1.0.0, SHA-256 (RFC 8785)). All M7/M8 content preserved word-for-word without any modifications.
+  - **Zero fictional content verified (Task 3)**: Grepped diff against all banned terms (`Ed25519`, `EIP-712`, `Merkle`, `attestation`, `RPC`, `archive node`, IP strings, `exec_cycle`, `compliance suite`, `spec v`, block ranges) — 0 matches.
+  - **Verification**: 63/63 unit tests pass. Both Next.js production builds succeed. Live cross-app proof rerun and passed 100% against running App Two while App One was verifiably dead. 0 BOMs across workspace. `ledgerlens/` byte-for-byte untouched at `HEAD bd9b41c`.
+
 ## In Progress
 
-- None. M8 complete and ready for review.
+- None. M9 complete and ready for review.
 
 ## Known Issues
 

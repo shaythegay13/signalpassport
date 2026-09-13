@@ -61,6 +61,29 @@ export default function ConsumerApp() {
 
   return (
     <div className="shell">
+      {/* Micro-Status Strip (Persistent real architecture facts) */}
+      <div className="status-strip">
+        <div className="status-strip-group">
+          <div className="status-strip-item">
+            <span className="status-dot" />
+            <span>MODE: Offline Verifier (Air-Gapped)</span>
+          </div>
+          <div className="status-strip-item">
+            <span style={{ color: "var(--text-dim)" }}>|</span>
+            <span>ENVIRONMENT: Local Host · Zero Network</span>
+          </div>
+        </div>
+        <div className="status-strip-group">
+          <div className="status-strip-item">
+            <span>SCHEMA: v1.0.0</span>
+          </div>
+          <div className="status-strip-item">
+            <span style={{ color: "var(--text-dim)" }}>|</span>
+            <span>DIGEST: SHA-256 (RFC 8785)</span>
+          </div>
+        </div>
+      </div>
+
       {/* App Header */}
       <header className="app-header">
         <div className="logo-group">
@@ -276,10 +299,13 @@ export default function ConsumerApp() {
               </div>
 
               {/* Technical Metadata Grid */}
-              <div style={{ marginTop: "20px", padding: "16px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "6px" }}>
-                <h4 style={{ margin: "0 0 12px 0", fontSize: "0.88rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  Passport Envelope Metadata
-                </h4>
+              <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+                  <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                    Passport Envelope Metadata
+                  </h4>
+                  <span className="badge badge-neutral">Offline Verified</span>
+                </div>
 
                 <div className="meta-grid" style={{ marginBottom: 0 }}>
                   <div className="meta-item">
@@ -320,7 +346,7 @@ export default function ConsumerApp() {
                   </div>
                   <div className="meta-item">
                     <span className="meta-key">Stored Envelope Digest</span>
-                    <span className="meta-val" style={{ fontSize: "0.78rem" }}>
+                    <span className="meta-val" style={{ fontSize: "0.78rem", color: "var(--accent)" }}>
                       {result.bundle.integrity.digest}
                     </span>
                   </div>
@@ -329,7 +355,7 @@ export default function ConsumerApp() {
 
               {/* Imported AI Explanation (PRD §10 - Display Only) */}
               {result.bundle.explanation ? (
-                <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface-raised)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface-raised)", borderRadius: "0.5rem", border: "1px solid var(--border)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <h4 style={{ margin: 0, fontSize: "1.02rem" }}>Imported Narrative Explanation</h4>

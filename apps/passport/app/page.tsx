@@ -224,6 +224,29 @@ export default function PassportApp() {
 
   return (
     <div className="shell">
+      {/* Micro-Status Strip (Persistent real architecture facts) */}
+      <div className="status-strip">
+        <div className="status-strip-group">
+          <div className="status-strip-item">
+            <span className="status-dot" />
+            <span>NETWORK: Ethereum Mainnet (Chain ID 1)</span>
+          </div>
+          <div className="status-strip-item">
+            <span style={{ color: "var(--text-dim)" }}>|</span>
+            <span>SOURCE: Blockscout REST v2 Public API</span>
+          </div>
+        </div>
+        <div className="status-strip-group">
+          <div className="status-strip-item">
+            <span>OBSERVATION WINDOW: 30 Calendar Days (UTC)</span>
+          </div>
+          <div className="status-strip-item">
+            <span style={{ color: "var(--text-dim)" }}>|</span>
+            <span>DIGEST: SHA-256 (RFC 8785)</span>
+          </div>
+        </div>
+      </div>
+
       {/* App Header */}
       <header className="app-header">
         <div className="logo-group">
@@ -660,10 +683,13 @@ export default function PassportApp() {
           </div>
 
           {/* Technical Metadata & Provenance Section */}
-          <div style={{ marginTop: "24px", padding: "16px 20px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "8px" }}>
-            <h4 style={{ margin: "0 0 12px 0", fontSize: "0.95rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Technical Details & Cryptographic Provenance
-            </h4>
+          <div style={{ marginTop: "24px", padding: "20px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "0.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+              <h4 style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                Technical Details & Cryptographic Provenance
+              </h4>
+              <span className="badge badge-neutral">RFC 8785 Canonical JSON</span>
+            </div>
 
             <div className="meta-grid" style={{ marginBottom: 0 }}>
               <div className="meta-item">
